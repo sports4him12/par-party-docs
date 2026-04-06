@@ -76,3 +76,5 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 | 2026-04-06 | User search minimum 2-character validation |
 | 2026-04-06 | Admin-promoted courses and tournaments with haversine location filtering |
 | 2026-04-06 | Tournament type interest preferences (Scramble, Amateur, Charity, etc.) with localStorage persistence and preferred-first sorting |
+| 2026-04-06 | Live tournament discovery via Google Custom Search API with SGA site: queries, city/state forwarding, and 2-hour cache |
+| 2026-04-06 | Tournament self-registration ("I'm Going") with friend grouping — users mark themselves registered and add friends to the record; panel shows all upcoming registrations |
