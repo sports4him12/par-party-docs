@@ -14,7 +14,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **Membership selection during registration** — Integrate plan selection (Free / Monthly / Annual) directly into the account creation flow with Stripe payment inline. Users should not have to navigate to a separate `/membership` page after registering; the choice and payment (if upgrading) happen as part of sign-up.
 
-- [ ] **Admin-promoted courses and tournaments** — Admins can flag specific courses or tournaments as "featured." Featured items appear as highlighted cards at the top of the relevant section on the user's dashboard, filtered to the user's current home location. Courses and tournaments outside the user's area should not be surfaced.
+- [x] **Admin-promoted courses and tournaments** — Admins can flag specific courses or tournaments as "featured." Featured items appear as highlighted cards at the top of the relevant section on the user's dashboard, filtered to the user's current home location. Courses and tournaments outside the user's area should not be surfaced.
 
 - [ ] **GolfNow cancellation handling** — Implement round cancellation according to GolfNow API requirements. Research GolfNow's cancellation policies (window, fees, confirmation flow) and mirror that logic in the `cancelRound` flow. Update the BPMN process and UI accordingly so users understand what happens when a booked tee time is cancelled.
 
@@ -74,3 +74,5 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 | 2026-04-06 | AI booking agent no longer leaks user emails in friend search results |
 | 2026-04-06 | Rate limiting on auth endpoints (10 req/min per IP, sliding window) |
 | 2026-04-06 | User search minimum 2-character validation |
+| 2026-04-06 | Admin-promoted courses and tournaments with haversine location filtering |
+| 2026-04-06 | Tournament type interest preferences (Scramble, Amateur, Charity, etc.) with localStorage persistence and preferred-first sorting |
