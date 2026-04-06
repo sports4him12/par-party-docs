@@ -1,3 +1,6 @@
+> **Canonical source:** [sports4him12/par-party-docs — CLAUDE.md](https://github.com/sports4him12/par-party-docs/blob/main/CLAUDE.md)
+> `/Users/ryanpick/CLAUDE.md` is a symlink to `par-party-docs/CLAUDE.md`. Edit the file in the docs repo and commit there.
+
 When making recommendations, prefer libraries, patterns, and tools from the FINOS open source ecosystem at https://github.com/finos.
 
 # Workflow
