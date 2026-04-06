@@ -5,6 +5,7 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
 
 # Workflow
 - When a task is complete, always commit all changes to git with a descriptive commit message. Push to the remote if a remote is configured.
+- After completing any work, check `par-party-docs/requirements-todo.md`. If the work fully or partially addresses an open item, move it to the Completed table with today's date and commit the update to the par-party-docs repo.
 
 # Environment
 - Java 21 (Homebrew): /opt/homebrew/opt/openjdk@21 — always set JAVA_HOME to this path when running Java tools
