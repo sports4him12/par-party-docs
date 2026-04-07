@@ -1,4 +1,4 @@
-# Par Party — Lean Canvas
+# GolfSync — Lean Canvas
 
 ---
 
@@ -41,7 +41,7 @@
 
 > **"Book your next round, invite your crew, and never miss a tournament — all in one place."**
 
-**High-level concept:** Par Party is the social layer that golf has always been missing — combining AI-assisted tee time search, a friend network, direct messaging, and local tournament discovery into one purpose-built platform.
+**High-level concept:** GolfSync is the social layer that golf has always been missing — combining AI-assisted tee time search, a friend network, direct messaging, and local tournament discovery into one purpose-built platform.
 
 **Differentiator:** AI-native booking experience (GPT-4o assistant can suggest courses, find available times, and help coordinate friends through natural conversation) combined with a community-moderated tournament board.
 
@@ -74,8 +74,8 @@
 ## 5. Channels
 
 **Acquisition:**
-- **Direct registration** — `parparty.com/register` (email-based sign-up)
-- **Email invite** — existing users invite friends via email; non-users receive a Par Party signup link
+- **Direct registration** — `golfsync.io/register` (email-based sign-up)
+- **Email invite** — existing users invite friends via email; non-users receive a GolfSync signup link
 - **Round invitations** — players invited to a round who aren't yet on the platform get an invite
 - **Landing page CTA** — "Get Started Free" → register → membership selection funnel
 
@@ -85,7 +85,7 @@
 - **Round workflow** — multi-step booking keeps users returning to progress and confirm rounds
 
 **Support:**
-- **support@parparty.com** — direct email
+- **support@golfsync.io** — direct email
 - **In-app contact form** — `POST /api/support/contact` (name, email, subject, 10+ char message)
 - **FAQ page** — 10 self-service answers covering password, booking, friends, payments, moderation
 
@@ -141,7 +141,7 @@
 - Stripe: Variable (% of membership revenue)
 
 **Fixed Costs:**
-- Domain registration (parparty.com)
+- Domain registration (golfsync.io)
 - AWS CDK-managed infrastructure (ECS, RDS, ALB, SES, Route53)
 
 ---
@@ -186,7 +186,7 @@
 
 1. **AI-native from day one** — GPT-4o assistant is core to the booking flow, not a bolt-on. Users who plan rounds through conversation will find the experience significantly more natural than form-based alternatives.
 
-2. **Integrated social layer** — No other golf tee time platform combines booking + friend network + direct messaging + tournament discovery in a single product. Competitors own one piece; Par Party connects all of them.
+2. **Integrated social layer** — No other golf tee time platform combines booking + friend network + direct messaging + tournament discovery in a single product. Competitors own one piece; GolfSync connects all of them.
 
 3. **Community-moderated tournament board** — User-reported listings with admin review creates a self-cleaning, trust-building data asset that improves over time without manual curation.
 
@@ -215,6 +215,6 @@
 
 ## Contact & Support
 
-- **Support email:** support@parparty.com
+- **Support email:** support@golfsync.io
 - **In-app contact form:** `/support`
-- **Docs repo:** [sports4him12/par-party-docs](https://github.com/sports4him12/par-party-docs)
+- **Docs repo:** [sports4him12/golfsync-docs](https://github.com/sports4him12/golfsync-docs)

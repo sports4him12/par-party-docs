@@ -1,4 +1,4 @@
-# Par Party — Executive MVP Review
+# GolfSync — Executive MVP Review
 **Prepared:** 2026-04-06 (CFO/COO/CMO) · Updated 2026-04-07 (CTO) · Progress update 2026-04-07  
 **Perspective:** CFO · COO · CMO · CTO  
 **Purpose:** Identify what to change, cut, or double down on before scaling
@@ -9,7 +9,7 @@
 
 ## What We're Looking At
 
-Par Party is a **golf-centric social platform** combining tee-time booking, tournament discovery, round scoring, friend matchmaking, and payment tracking — all under a subscription model ($9.99/month, $79.99/year) with a 30-day free trial. The tech stack is solid (Spring Boot, Next.js, AWS CDK), the architecture is clean, and infrastructure-as-code is in place. On paper, the foundation is production-ready.
+GolfSync is a **golf-centric social platform** combining tee-time booking, tournament discovery, round scoring, friend matchmaking, and payment tracking — all under a subscription model ($9.99/month, $79.99/year) with a 30-day free trial. The tech stack is solid (Spring Boot, Next.js, AWS CDK), the architecture is clean, and infrastructure-as-code is in place. On paper, the foundation is production-ready.
 
 The honest read: **the bones are good, and the core loops are now in place.** The remaining gaps are activation, marketing infrastructure, real tee-time data, and cost optimization.
 
@@ -78,7 +78,7 @@ Webhook handler at `POST /api/stripe/webhook` uses raw body HMAC signature verif
 
 ### Blocker #1: GolfNow Integration is Mocked
 
-⬜ The tee time booking feature remains mocked. The `GolfNowClient` returns hardcoded data. **This is the highest-priority unresolved blocker.** Par Party cannot be marketed as a tee-time booking platform until this is real.
+⬜ The tee time booking feature remains mocked. The `GolfNowClient` returns hardcoded data. **This is the highest-priority unresolved blocker.** GolfSync cannot be marketed as a tee-time booking platform until this is real.
 
 **Decision still needed:** (a) negotiate GolfNow API partnership, (b) pivot to Supreme Golf or TeeOff, or (c) reposition as a "round management" platform and remove the tee-time booking promise until the integration exists.
 

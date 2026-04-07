@@ -1,8 +1,8 @@
-# Par Party — Architecture
+# GolfSync — Architecture
 
 ## Overview
 
-Par Party is a full-stack golf social and membership application. Users chat with an AI assistant to plan rounds, search for tee times, invite friends, and message each other. Round bookings are orchestrated through a Camunda BPMN workflow engine. Users can subscribe to a Par Party membership via Stripe (or a promo code). Tournament discovery includes a community reporting workflow where users flag booked or invalid tournaments for admin review.
+GolfSync is a full-stack golf social and membership application. Users chat with an AI assistant to plan rounds, search for tee times, invite friends, and message each other. Round bookings are orchestrated through a Camunda BPMN workflow engine. Users can subscribe to a GolfSync membership via Stripe (or a promo code). Tournament discovery includes a community reporting workflow where users flag booked or invalid tournaments for admin review.
 
 ---
 
@@ -17,7 +17,7 @@ Par Party is a full-stack golf social and membership application. Users chat wit
                           │  HTTP (proxied via next.config.mjs)
                           ▼
 ┌────────────────────────────────────────────────────────────┐
-│                      parparty-api                          │
+│                      golfsync-api                          │
 │          Spring Boot 3.4.4  ·  Java 21  ·  :8080          │
 │                                                            │
 │  ┌────────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐  │
@@ -28,7 +28,7 @@ Par Party is a full-stack golf social and membership application. Users chat wit
 │               ┌───────┴──────┐           ┌────────┘        │
 │               ▼              ▼           ▼                 │
 │          MySQL :3306   CamundaClient  OpenAI API           │
-│          (parparty DB)  (WebClient)   (GPT-4o)             │
+│          (golfsync DB)  (WebClient)   (GPT-4o)             │
 │                                                            │
 │          Stripe SDK (payment intents for membership)       │
 └────────────────────────────────────────────────────────────┘
@@ -36,7 +36,7 @@ Par Party is a full-stack golf social and membership application. Users chat wit
                           │  HTTP  engine-rest
                           ▼
 ┌────────────────────────────────────────────────────────────┐
-│                     parparty-server                        │
+│                     golfsync-server                        │
 │        Camunda 7.22  ·  Spring Boot  ·  H2  ·  :8090      │
 │                                                            │
 │   BPMN:  golf-round-booking-process                        │
@@ -52,9 +52,9 @@ Par Party is a full-stack golf social and membership application. Users chat wit
 
 | Module | Path | Port | Stack |
 |---|---|---|---|
-| `parparty-server` | `ParPartyApplication/parparty-server` | 8090 | Java / Camunda 7.22 / H2 file DB |
-| `parparty-api` | `ParPartyApplication/parparty-api` | 8080 | Java 21 / Spring Boot 3.4.4 / MySQL |
-| `parparty-web` | `ParPartyApplication/parparty-web` | 3000 | TypeScript / Next.js 14 / Tailwind |
+| `golfsync-server` | `GolfSyncApplication/golfsync-server` | 8090 | Java / Camunda 7.22 / H2 file DB |
+| `golfsync-api` | `GolfSyncApplication/golfsync-api` | 8080 | Java 21 / Spring Boot 3.4.4 / MySQL |
+| `golfsync-web` | `GolfSyncApplication/golfsync-web` | 3000 | TypeScript / Next.js 14 / Tailwind |
 
 ---
 
@@ -66,7 +66,7 @@ All tables are owned by **Liquibase** (`spring.jpa.hibernate.ddl-auto=none`). Mi
 users                                               (001)
   id, username (unique), name, email (unique), password_hash,
   home_address, phone, handicap, role {USER|ADMIN}, created_at
-  Seed: admin@parparty.com / admin123
+  Seed: admin@golfsync.io / admin123
 
 courses                                             (002)
   id, name, location, description, par, holes, created_at
@@ -151,7 +151,7 @@ JwtUtil.generateToken(email, userId, role)
         │
         ▼  { token, userId, username, role }
         │
-Client stores token in localStorage (key: parparty_token)
+Client stores token in localStorage (key: golfsync_token)
   • auth.ts checks exp claim on every read — stale tokens removed
   • api.ts auto-redirects to /login on any 401 (except PASSWORD_EXPIRED)
         │
@@ -171,7 +171,7 @@ Admin endpoints (`/api/admin/**`) additionally require `ROLE_ADMIN`, enforced by
 Allowed origin is configured via `PARPARTY_CORS_ALLOWED_ORIGIN` env var (default: `http://localhost:3000`). The wildcard `*` is never used.
 
 ### Rate Limiting
-`RateLimitFilter` (applied before `JwtAuthenticationFilter`) enforces a sliding-window limit of 10 requests/minute per IP on `/api/auth/login` and `/api/auth/register`. Exceeding the limit returns `429 RATE_LIMIT_EXCEEDED`. Configurable via `parparty.rate-limit.max-requests` and `parparty.rate-limit.enabled` properties (disabled in tests).
+`RateLimitFilter` (applied before `JwtAuthenticationFilter`) enforces a sliding-window limit of 10 requests/minute per IP on `/api/auth/login` and `/api/auth/register`. Exceeding the limit returns `429 RATE_LIMIT_EXCEEDED`. Configurable via `golfsync.rate-limit.max-requests` and `golfsync.rate-limit.enabled` properties (disabled in tests).
 
 ---
 
@@ -380,13 +380,13 @@ Memory is in-process per `conversationId` and does not persist across API restar
 
 ## Camunda Workflow Integration
 
-`parparty-api` communicates with `parparty-server` exclusively via **HTTP** (Camunda `engine-rest`). No embedded engine.
+`golfsync-api` communicates with `golfsync-server` exclusively via **HTTP** (Camunda `engine-rest`). No embedded engine.
 
 ```
-parparty-api  (CamundaClient.java — WebClient)
+golfsync-api  (CamundaClient.java — WebClient)
       │  Base URL: http://localhost:8090/engine-rest
       ▼
-parparty-server  (Camunda 7.22)
+golfsync-server  (Camunda 7.22)
       ├─  POST /process-definition/key/{key}/start
       ├─  GET  /task?processInstanceId={id}
       ├─  POST /task/{id}/complete
@@ -431,7 +431,7 @@ GolfNowController → GolfNowService → GolfNowClient (interface)
                                                 Confirmation: "GNOW-XXXXXXXX"
 ```
 
-Round booking is paid **directly with the tee time provider** (GolfNow), not through Par Party. Par Party membership payments are separate (Stripe).
+Round booking is paid **directly with the tee time provider** (GolfNow), not through GolfSync. GolfSync membership payments are separate (Stripe).
 
 ---
 
@@ -470,7 +470,7 @@ Next.js 14 App Router (TypeScript)
 │   └── types.ts                 TypeScript interfaces: User, Round, TeeTime, MembershipIntent,
 │                                PromoValidation, UserReport, TournamentReport, PaymentConfig, …
 │
-└── tailwind.config.ts           Par Party brand palette
+└── tailwind.config.ts           GolfSync brand palette
       primary: #D03027 (burnt orange/red)
       navy:    #004879
 ```
@@ -498,12 +498,12 @@ Next.js 14 App Router (TypeScript)
 
 ```bash
 # 1. Camunda engine (terminal 1)
-cd ParPartyApplication/parparty-server
+cd GolfSyncApplication/golfsync-server
 JAVA_HOME=/opt/homebrew/opt/openjdk@21 mvn spring-boot:run
 # → http://localhost:8090  Cockpit/Tasklist: demo/demo
 
 # 2. Spring Boot API (terminal 2)
-cd ParPartyApplication/parparty-api
+cd GolfSyncApplication/golfsync-api
 export DB_PASSWORD=changeme           # matches your MySQL root password
 export PARPARTY_JWT_SECRET=$(openssl rand -hex 32)
 export OPENAI_API_KEY=sk-...
@@ -514,19 +514,19 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 mvn spring-boot:run
 # → http://localhost:8080  Liquibase migrations run on startup
 
 # 3. Next.js frontend (terminal 3)
-cd ParPartyApplication/parparty-web
+cd GolfSyncApplication/golfsync-web
 npm install && npm run dev
 # → http://localhost:3000
 
-# Admin login: admin@parparty.com / admin123
+# Admin login: admin@golfsync.io / admin123
 ```
 
 ### MySQL Database
 
-The `parparty` database must exist before starting the API:
+The `golfsync` database must exist before starting the API:
 
 ```sql
-CREATE DATABASE IF NOT EXISTS parparty
+CREATE DATABASE IF NOT EXISTS golfsync
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
@@ -545,7 +545,7 @@ Liquibase applies all 8 changesets automatically on startup, including the admin
 | `MAIL_HOST` | No | SMTP host (default: smtp.gmail.com) |
 | `MAIL_USERNAME` | No | SMTP username |
 | `MAIL_PASSWORD` | No | SMTP password |
-| `MAIL_FROM` | No | From address (default: noreply@parparty.com) |
+| `MAIL_FROM` | No | From address (default: noreply@golfsync.io) |
 
 Copy `.env.example` → `.env` and fill in values before running `docker-compose up`.
 
@@ -583,7 +583,7 @@ JaCoCo enforces **80% instruction coverage** on service and controller classes (
 
 **Camunda decoupled via HTTP** — the API never imports Camunda Java libraries. All process interactions go through `CamundaClient.java` (WebClient), making the workflow engine replaceable and independently deployable.
 
-**GolfNow behind an interface** — `GolfNowClient` is an interface. The mock is `@Primary` today. Swapping to the real GolfNow sandbox is a single-class addition with no controller or service changes. Round payments go to the tee time provider directly — Par Party never handles round booking payments.
+**GolfNow behind an interface** — `GolfNowClient` is an interface. The mock is `@Primary` today. Swapping to the real GolfNow sandbox is a single-class addition with no controller or service changes. Round payments go to the tee time provider directly — GolfSync never handles round booking payments.
 
 **Stripe graceful degradation** — when `STRIPE_SECRET_KEY` is not set, `StripeConfig.isConfigured()` returns false. The API returns 503 on intent creation; the frontend shows "Payments Coming Soon." No code path change needed to activate payments.
 
@@ -601,7 +601,7 @@ JaCoCo enforces **80% instruction coverage** on service and controller classes (
 
 **Service-layer deletes** — admin delete endpoints call `UserService.deleteUser()` and `RoundService.adminDeleteRound()` rather than accessing repositories directly, keeping business logic in the service layer.
 
-**Password rotation** — `AuthService.login()` rejects passwords older than `parparty.password.expiry-days` (default 90) with `PasswordExpiredException` → HTTP 401 `PASSWORD_EXPIRED`. The frontend redirects to `/change-password`. `POST /api/auth/change-password` resets the `password_changed_at` timestamp.
+**Password rotation** — `AuthService.login()` rejects passwords older than `golfsync.password.expiry-days` (default 90) with `PasswordExpiredException` → HTTP 401 `PASSWORD_EXPIRED`. The frontend redirects to `/change-password`. `POST /api/auth/change-password` resets the `password_changed_at` timestamp.
 
 **User banning** — when an admin accepts a `UserReport`, `UserReportService.decide()` sets `user.banned = true`. Banned users receive `403` on login and their email is blocked from re-registration with a generic message to avoid confirming the ban state to the registrant.
 

@@ -1,4 +1,4 @@
-# Par Party — Requirements & To-Do
+# GolfSync — Requirements & To-Do
 
 Living backlog of features, improvements, and fixes. Add items here and they'll be picked up and addressed in future sessions.
 
