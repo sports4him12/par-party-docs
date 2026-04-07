@@ -36,7 +36,7 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
 
 # Documentation
 - When adding or modifying user-facing features, always update `parparty-web/app/how-to/page.tsx` (How To Guide) and the `faqs` array in `parparty-web/app/support/page.tsx` (FAQ) as relevant.
-- When making changes that affect AWS deployment — new secrets, new env vars injected into ECS tasks, new CDK stacks or services, new post-deploy manual steps — always update `AWS_DeploymentGuide.md` to reflect those changes.
+- **MANDATORY — do this automatically, without being asked:** When a change requires any AWS infrastructure update — new env vars injected into ECS tasks, new Secrets Manager secrets, new IAM permissions, new services or stacks, changed health check paths, or any other deployment-time configuration — update both the CDK stack(s) in `parparty-cdk/` and `AWS_DeploymentGuide.md` in the same commit as the application change. Do not leave infrastructure and code out of sync.
 
 # FluxNova / BPMN Conventions
 - FluxNova BPM starters (`org.finos.fluxnova.bpm.springboot`) are not on Maven Central; use Camunda 7 starters (`org.camunda.bpm.springboot`) as API-compatible replacements
