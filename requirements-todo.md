@@ -80,3 +80,9 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 | 2026-04-06 | Free tier by default — new accounts limited to tee time booking; friends/messaging/round invitations gated behind paid membership; upgrade banner on dashboard and full-page gates on friends/messages pages |
 | 2026-04-06 | Round scores — players can post gross stroke scores to booked rounds; friend score feed (paid feature) on dashboard |
 | 2026-04-06 | Booker/Payment settlement — round creator identified as Booker; per-player dues (cents) and PAID/WAIVED status tracked for both rounds and tournament registrations; booker controls in round detail UI |
+| 2026-04-07 | Availability Polls — booker creates date/time option polls, invites friends, friends vote I'm In/Can't Make It; dashboard widget shows active polls with "Vote needed" badge; new Liquibase migration 020 |
+| 2026-04-07 | Add player post-creation — booker can invite additional players to an existing round from the Round detail page |
+| 2026-04-07 | Nudge pending invitees — booker sends in-app reminder message to players who haven't responded (Remind button per INVITED player) |
+| 2026-04-07 | Safe tournament registration URL resolver — GET /api/tournaments/register-url resolves top organic Google CSE result with adult-content safety filter; fallback to Google Search when blocked |
+| 2026-04-07 | How To Guide restructured into role-based hub with sub-pages: Booker, Participant, Tournaments, Account |
+| 2026-04-07 | CTO AWS assessment added to executive-mvp-review.md — spend breakdown, Fargate cost analysis, alternatives (Lambda, EC2, App Runner), three immediate cost-reduction recommendations |

@@ -1,6 +1,6 @@
 # Par Party — Executive MVP Review
-**Prepared:** 2026-04-06  
-**Perspective:** CFO · COO · CMO  
+**Prepared:** 2026-04-06 (CFO/COO/CMO) · Updated 2026-04-07 (CTO)  
+**Perspective:** CFO · COO · CMO · CTO  
 **Purpose:** Identify what to change, cut, or double down on before scaling
 
 ---
@@ -207,7 +207,130 @@ This is the single highest-ROI feature not yet built.
 
 ---
 
-## Prioritized Change List
+## CTO View — AWS Spend, Compute Architecture & Technical Risk
+
+### Where the Money Goes Right Now
+
+At current scale (dev + prod), the rough monthly AWS bill looks like this:
+
+| Service | Dev | Prod | Notes |
+|---|---|---|---|
+| **ECS Fargate** (API) | ~$35 | ~$70–140 | 0.25 vCPU / 512 MB dev; 0.5 vCPU / 1 GB × 2 tasks prod |
+| **ECS Fargate** (Camunda) | ~$35 | ~$70 | Same sizing; always-on even when idle |
+| **RDS MySQL** (db.t3.micro) | ~$15 | ~$30 | Prod has Multi-AZ: $60 |
+| **ALB** | ~$20 | ~$20 | Flat LCU base regardless of traffic |
+| **NAT Gateway** | ~$35 | ~$35 | Biggest hidden cost; charged per GB egress |
+| **Secrets Manager** | ~$5 | ~$5 | Per-secret monthly fee |
+| **CloudWatch Logs** | ~$5 | ~$10 | Ingestion + retention |
+| **ECR** | ~$1 | ~$1 | Image storage |
+| **Total** | **~$150/mo** | **~$220–320/mo** | |
+
+**The NAT Gateway is the silent budget killer.** At $0.045/GB outbound + $32/month base per AZ, a two-AZ prod setup costs ~$65/month just for NAT — before a single byte of real traffic. At low traffic volumes, NAT dominates the bill.
+
+**Camunda runs 24/7 even when no workflows are active.** For Par Party's current workflow volume (round booking, tournament reports), Camunda spends most of its time idle. That's ~$70/month of compute doing nothing.
+
+---
+
+### The ECS Fargate Problem
+
+Fargate is easy to set up (the CDK stack is clean), but it's an expensive model for variable, low-baseline traffic:
+
+**What Fargate costs you:**
+- You pay for reserved vCPU and memory per-second, always — even at 3 AM with zero users
+- No scale-to-zero (unless you build ECS service scale policies with a 0 min task count, which introduces cold starts)
+- No burst pricing benefit — you pay full price at 1 req/hour and at 10,000 req/hour
+
+**What Fargate gives you:**
+- No servers to manage (good)
+- Predictable performance at steady load (good)
+- Works well at 100+ sustained req/sec (overkill for current scale)
+
+At the current stage — hundreds of users, not tens of thousands — Fargate's pricing model extracts more money than the workload justifies.
+
+---
+
+### Compute Alternatives Worth Considering
+
+#### Option A: AWS Lambda + API Gateway (Serverless)
+- **Cost model:** Pay per invocation. At low traffic, could be $5–20/month instead of $70–140.
+- **Trade-off:** Spring Boot cold starts are painful (2–5 seconds). Mitigable with GraalVM native image or Spring Cloud Function + AWS Lambda Web Adapter, but adds build complexity.
+- **Best for:** If traffic is spiky and the team is willing to refactor the Spring app. Not recommended as a drop-in replacement without native compilation.
+- **Verdict:** High upside long-term, but requires 2–4 weeks of refactoring. Not the first move.
+
+#### Option B: Single EC2 t3.small or t4g.small (Always-On)
+- **Cost:** ~$15–17/month (t4g.small, ARM) vs. $70+/month Fargate.
+- **Trade-off:** You own the OS, security patches, restarts. One instance = single point of failure. No auto-scaling.
+- **Best for:** The dev environment right now. The dev Fargate cluster is spending ~$70/month; a single t3.small would cost ~$17 and be just as capable for development.
+- **Verdict: Replace dev Fargate with EC2 immediately. Save ~$50/month with no tradeoffs for development.**
+
+#### Option C: ECS on EC2 (not Fargate)
+- **Cost:** Pay for EC2 instances, run multiple containers on them. A `t3.medium` ($30/month) can run both the API and Camunda tasks.
+- **Trade-off:** Manage instance fleet, handle instance failure. Auto Scaling Groups add operational complexity.
+- **Better for:** When you hit 50+ req/sec sustained and need to manage density. Premature now.
+- **Verdict:** Worth revisiting at $50K+ ARR. Not today.
+
+#### Option D: Fly.io, Railway, or Render (Managed PaaS)
+- **Cost:** $20–40/month for equivalent workloads; some have free tiers.
+- **Trade-off:** Lose native AWS IAM integration, Secrets Manager, CDK. Adds vendor dependency outside AWS.
+- **Better for:** Startups that want to avoid AWS complexity entirely. Par Party is already AWS-native — switching costs are high.
+- **Verdict:** Not recommended. The CDK investment is valuable; don't abandon it.
+
+#### Option E: AWS App Runner
+- **Cost:** Similar to Fargate but with a simpler pricing model and automatic scale-to-zero (pause mode at $0.007/vCPU-hour paused).
+- **Trade-off:** Less configuration control than ECS. No VPC attachment without extra cost.
+- **Better for:** Stateless web services (the Next.js frontend, and possibly the API). Camunda is stateful and needs a volume — not a fit.
+- **Verdict:** Strong candidate for the Next.js frontend (replacing Fargate or CloudFront+S3). Would save $30–40/month on frontend compute.
+
+---
+
+### The Three Biggest Immediate Cost Wins
+
+**1. Kill the dev Fargate cluster — use EC2 or a single App Runner service (~$50/month savings)**
+
+The CDK `ParPartyDevStack` runs two Fargate services (API + Camunda). A single `t3.small` EC2 instance running Docker Compose handles the same workload for $17/month. Set up an ECS cluster on that EC2, or just run Docker directly.
+
+**2. Replace NAT Gateway with VPC Endpoints for AWS services (~$35/month savings)**
+
+Most of the NAT traffic in prod goes to Secrets Manager, ECR, and CloudWatch. Replace the NAT Gateway with Interface VPC Endpoints for those services and a Gateway VPC Endpoint for S3. One NAT Gateway (single AZ, not multi-AZ) for other outbound traffic costs $32/month vs. $65 for two.
+
+**3. Evaluate Camunda in-process (embedded) vs. external service**
+
+Camunda is currently a standalone ECS service consuming ~$35/month dev / $70/month prod. The workflows in Par Party (round booking, tournament report review) are simple 3–5 step processes. Embedding Camunda within the Spring Boot API process (using `camunda-bpm-spring-boot-starter` without the REST engine exposed publicly) eliminates the second ECS task entirely. Same workflow behavior, half the Fargate cost.
+
+This is the single highest-impact architectural change for AWS spend.
+
+---
+
+### Technical Debt That Will Become Expensive
+
+**Liquibase on startup.** The API runs Liquibase migrations at startup. In a multi-task ECS deployment (2 prod tasks), both tasks race to apply migrations on cold start. This is currently safe because Spring Boot + Liquibase locks the changeset table, but it's brittle. Move migrations to a one-shot ECS task (run before the API service update) to eliminate the race condition entirely.
+
+**Single-region deployment.** Everything is in one AWS region. A regional AZ outage takes down the prod site. For a golf booking platform, downtime on a Friday morning (when users book weekend rounds) is high-impact. No immediate fix needed, but it's a risk to document.
+
+**No CDN on the Next.js frontend.** The frontend is served from an ECS Fargate container behind an ALB. For a React app with mostly static assets, this means every request hits the compute layer. Serving static assets from CloudFront + S3 would cut ALB costs and reduce latency. The CDK already has the patterns for this — it's a 2-day implementation.
+
+**No CI/CD pipeline.** Deployments are manual `cdk deploy` commands. At team size > 1 engineer, this becomes a coordination problem. Add CodePipeline or GitHub Actions deploying to the ECS cluster. This is a week of work with high leverage.
+
+---
+
+### CTO Priority List
+
+| Priority | Action | Savings / Impact |
+|---|---|---|
+| **Immediate** | Embed Camunda in-process (remove second ECS service) | ~$70–105/month |
+| **Immediate** | Replace dev Fargate with EC2 t3.small | ~$50/month |
+| **Near-term** | Replace NAT Gateway with VPC Endpoints | ~$30–35/month |
+| **Near-term** | Serve Next.js static assets via CloudFront + S3 | ~$20/month + latency |
+| **Near-term** | Run Liquibase as a pre-deploy ECS task (not at startup) | Reliability |
+| **Near-term** | Add CI/CD pipeline (GitHub Actions → ECS deploy) | Velocity |
+| **Medium-term** | Redis for AI conversation state + caching | Correctness at scale |
+| **Medium-term** | Evaluate App Runner for stateless API services | Simplicity |
+
+**Bottom line on compute:** Fargate is the right choice for production at $500K+ ARR when you need auto-scaling and don't want to manage instances. At current scale, you're paying Fargate prices for EC2-level workloads. The three immediate actions above reduce the AWS bill by $150–190/month — roughly half — with no product impact.
+
+The Camunda embedding is the highest-leverage change: simpler ops, lower cost, and it removes a distributed failure point. Make that the first infrastructure change before any feature work.
+
+---
 
 What we'd do differently or do first:
 
