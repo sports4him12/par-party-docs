@@ -19,12 +19,14 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
 - Schema is owned by Liquibase — always set `spring.jpa.hibernate.ddl-auto=none`
 
 # Testing
-- If a change anywhere in the project causes an existing Unit Test or Acceptance Test to fail, I need to be prompted before any tests are getting updated. 
+- **MANDATORY — do this automatically, without being asked, as part of every code change:**
+  - New service / controller / tool class → add a corresponding unit test class in the same commit
+  - Any change to API contracts, UI behavior, frontend routing, or auth flow → update or add Cypress tests in `parparty-web/cypress/e2e/` to match; do not leave Cypress tests in a stale state
+  - New user-facing feature → add Cypress tests covering the happy path and key edge cases before committing
+- **Exception — stop and prompt me first:** If a change causes an *existing* Unit Test or Acceptance Test (`@SpringBootTest`) to fail, do not modify those tests without asking.
 - All code changes must maintain at least 80% unit test coverage (enforced by JaCoCo in CI)
-- New service, controller, and tool classes must have corresponding unit test classes
 - Use `@ExtendWith(MockitoExtension.class)` for pure unit tests; use `@WebMvcTest` slices for controllers
 - Use `@MockitoBean` (Spring Boot 3.4+) instead of the deprecated `@MockBean` in `@WebMvcTest` tests
-- When making changes that affect authentication flow, API contracts, frontend routing, or UI behavior, always review and update Cypress tests in `parparty-web/cypress/e2e/` as needed to keep them accurate.
 
 # Environment Variables
 - Two env files are maintained in the repo root:
