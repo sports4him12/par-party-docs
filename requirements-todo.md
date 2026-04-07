@@ -11,7 +11,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 <!-- New user-facing functionality to build -->
 
 
-- [ ] **Membership selection during registration** — Integrate plan selection (Free / Monthly / Annual) directly into the account creation flow with Stripe payment inline. Users should not have to navigate to a separate `/membership` page after registering; the choice and payment (if upgrading) happen as part of sign-up.
+- [x] **Membership selection during registration** — Free tier removed; replaced with a 30-day free trial (full access, no credit card). Plan selector removed from registration. Users subscribe Monthly or Annual after trial via /membership.
 
 - [x] **Admin-promoted courses and tournaments** — Admins can flag specific courses or tournaments as "featured." Featured items appear as highlighted cards at the top of the relevant section on the user's dashboard, filtered to the user's current home location. Courses and tournaments outside the user's area should not be surfaced.
 
@@ -86,3 +86,4 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 | 2026-04-07 | Safe tournament registration URL resolver — GET /api/tournaments/register-url resolves top organic Google CSE result with adult-content safety filter; fallback to Google Search when blocked |
 | 2026-04-07 | How To Guide restructured into role-based hub with sub-pages: Booker, Participant, Tournaments, Account |
 | 2026-04-07 | CTO AWS assessment added to executive-mvp-review.md — spend breakdown, Fargate cost analysis, alternatives (Lambda, EC2, App Runner), three immediate cost-reduction recommendations |
+| 2026-04-07 | Free tier replaced with 30-day free trial — all features unlocked on signup, trial countdown on dashboard, TRIAL_EXPIRED 403 redirects to /membership; Stripe subscription webhooks (checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted) with HMAC signature verification; payment-failed and cancellation emails |
