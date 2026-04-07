@@ -78,3 +78,5 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 | 2026-04-06 | Live tournament discovery via Google Custom Search API with SGA site: queries, city/state forwarding, and 2-hour cache |
 | 2026-04-06 | Tournament self-registration ("I'm Going") with friend grouping — users mark themselves registered and add friends to the record; panel shows all upcoming registrations |
 | 2026-04-06 | Free tier by default — new accounts limited to tee time booking; friends/messaging/round invitations gated behind paid membership; upgrade banner on dashboard and full-page gates on friends/messages pages |
+| 2026-04-06 | Round scores — players can post gross stroke scores to booked rounds; friend score feed (paid feature) on dashboard |
+| 2026-04-06 | Booker/Payment settlement — round creator identified as Booker; per-player dues (cents) and PAID/WAIVED status tracked for both rounds and tournament registrations; booker controls in round detail UI |
