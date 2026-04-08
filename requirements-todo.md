@@ -31,6 +31,8 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 <!-- Auth, secrets, AWS, hardening, compliance -->
 
+- [ ] **MFA for sensitive operations** — Add multi-factor authentication challenges before high-risk actions: Stripe billing management (plan changes, payment method updates, subscription cancellation), account deletion, and admin-panel access. Evaluate TOTP (Google Authenticator / Authy via a library such as FINOS `legend-engine` auth patterns or a standard TOTP library) vs. email OTP as the second factor. Backend needs an `mfa_secret` column, a verify-code endpoint, and a step-up token pattern so the MFA check doesn't break the existing session flow. Frontend needs a modal challenge that fires before the sensitive action proceeds.
+
 - [ ] **CDK contact/support information audit** — Review all hard-coded support and contact addresses across the CDK stack and application. Currently `supportEmail: 'support@golfsync.com'` is set in `golfsync-cdk/bin/parparty-cdk.ts` for both dev and prod; the account page references `support@golfsync.io` (different domain). Decide on the canonical support address and make it consistent across CDK config, `application.properties` (`golfsync.mail.support`), all email templates, and the `/account` page. Consider driving it from a Secrets Manager value rather than hard-coding.
 
 - [ ] **CDK TODOs — Route53 hosted zone and ACM certificate** — `parparty-cdk.ts` has two outstanding `// TODO` comments in the prod stack: (1) `hostedZoneId` must be set (find via `aws route53 list-hosted-zones`) and (2) `certificateArn` must be provided (request via ACM in us-east-1). Both are required before the prod ALB HTTPS listener will work. Document the values in `AWS_DeploymentGuide.md` once confirmed.
