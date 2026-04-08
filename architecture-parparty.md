@@ -48,6 +48,64 @@ GolfSync is a full-stack golf social and membership application. Users chat with
 
 ---
 
+## Integration Map
+
+```mermaid
+graph TD
+    Browser["🌐 Browser\nNext.js 14 · :3000"]
+
+    subgraph API["golfsync-api · Spring Boot · :8080"]
+        Auth["AuthService\n(JWT + BCrypt)"]
+        AI["AI Chat\n(LangChain4j)"]
+        Serper1["TournamentDiscoveryService\n(on-demand)"]
+        Serper2["CuratedTournamentRefreshService\n(@Scheduled daily 03:00)"]
+        GolfNowSvc["GolfNowService\n→ GolfNowClient (mock today)"]
+        Payment["PaymentService\n(Stripe SDK)"]
+        Email["EmailService\n(SMTP)"]
+        Camunda["CamundaClient\n(WebClient HTTP)"]
+    end
+
+    MySQL[("🗄 MySQL\ngolfsync DB\n:3306")]
+    Redis[("⚡ Redis\nAI memory\n(optional)\n:6379")]
+
+    subgraph External ["External Services"]
+        OpenAI["☁ OpenAI\nGPT-4o"]
+        SerperAPI["☁ Serper.dev\nGoogle Search REST"]
+        GolfNowAPI["☁ GolfNow API\n(sandbox.api.gnsvc.com)\n🔜 not yet wired"]
+        StripeAPI["☁ Stripe\nPayment Intents\n/ Subscriptions"]
+        Gmail["☁ Gmail SMTP\n:587 STARTTLS"]
+        CamundaServer["⚙ Camunda 7\ngolfsync-server\n:8090"]
+    end
+
+    Browser -->|"HTTP / next.config rewrites"| API
+    Auth --> MySQL
+    AI -->|"chat completions"| OpenAI
+    AI -.->|"conversation memory (AI_REDIS_ENABLED=true)"| Redis
+    Serper1 -->|"POST /search\nX-API-KEY"| SerperAPI
+    Serper2 -->|"POST /search\nX-API-KEY"| SerperAPI
+    Serper1 --> MySQL
+    Serper2 --> MySQL
+    GolfNowSvc -->|"Simple Auth / HMAC"| GolfNowAPI
+    Payment -->|"PaymentIntent.create"| StripeAPI
+    Email -->|"MIME / STARTTLS"| Gmail
+    Camunda -->|"engine-rest HTTP"| CamundaServer
+    CamundaServer --> MySQL
+    API --> MySQL
+```
+
+| Integration | Status | Env Vars |
+|---|---|---|
+| **MySQL** | ✅ Active | `DB_PASSWORD` |
+| **OpenAI GPT-4o** | ✅ Active (optional) | `OPENAI_API_KEY` |
+| **Serper.dev** | ✅ Active (optional) | `SERPER_API_KEY` |
+| **Stripe** | ✅ Active (optional) | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` |
+| **Gmail SMTP** | ✅ Active (optional) | `MAIL_USERNAME`, `MAIL_PASSWORD` |
+| **Camunda BPM** | ✅ Active | *(embedded in golfsync-server)* |
+| **Redis** | 🔧 Optional | `AI_REDIS_ENABLED=true`, `REDIS_HOST`, `REDIS_PORT` |
+| **GolfNow API** | 🔜 Planned | `GOLFNOW_API_KEY` *(mock today)* |
+
+---
+
 ## Repositories
 
 | Module | Path | Port | Stack |
