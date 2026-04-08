@@ -38,13 +38,13 @@
 
 | # | Action | Owner |
 |---|---|---|
-| 6 | Shareable round invite links | CMO |
+| 6 | ~~Shareable round invite links~~ | ✅ CMO |
 | 7 | Course leaderboard (top scores per course) | CMO |
 | 8 | Shareable score card (PNG export for Instagram/X) | CMO |
 | 9 | ~~Move AI conversation state to Redis~~ | ✅ CTO |
 | 10 | Expand tournament database to national coverage | COO |
 | 11 | ~~Rate limit AI chat (5/min), search (30/min), tee time search (10/min)~~ | ✅ CTO |
-| 12 | GDPR: user self-deletion API | COO |
+| 12 | ~~GDPR: user self-deletion API~~ | ✅ COO |
 
 ### Medium-Term (90–180 days)
 
@@ -57,7 +57,7 @@
 | 17 | Referral program (1 month free per paid conversion) | CMO |
 | 18 | Seasonal pricing ($29.99 for 6 months) | CFO |
 | 19 | B2B pilot: sell to 2–3 golf clubs | CFO |
-| 20 | Analytics dashboard (retention, churn, LTV) | CFO |
+| 20 | ~~Analytics dashboard (retention, churn, LTV)~~ | ✅ CFO |
 
 ---
 
@@ -205,6 +205,9 @@ No multi-region or failover. An outage during peak booking hours (Friday morning
 | — | Stripe Checkout Session (subscription mode) — hosted checkout for recurring billing | ✅ 2026-04-07 |
 | 11 | Rate limit AI chat (5/min/user), user search (30/min/IP), tee-time search (10/min/IP) | ✅ 2026-04-07 |
 | 9 | Redis-backed AI conversation memory — RedisChatMemoryStore + ElastiCache CDK; graceful in-memory fallback | ✅ 2026-04-07 |
+| 6 | Shareable round invite link — GET /api/invite/rounds/{id}/link; "Copy Invite Link" button on round detail page | ✅ 2026-04-07 |
+| 12 | GDPR self-deletion — DELETE /api/users/me cancels Stripe subscription, cascade-deletes all data, clears cookie; /account page with two-step confirmation | ✅ 2026-04-07 |
+| 20 | Analytics dashboard — AnalyticsService queries user_events + users; KPI cards, 5-step funnel, 30-day daily signups; Analytics tab on /admin | ✅ 2026-04-07 |
 
 ### CFO
 - ✅ **Free tier → 30-day trial** — Free tier eliminated. Full access from day one, no credit card required. Trial countdown on dashboard (amber ≤5 days, red on expiry). `TRIAL_EXPIRED` 403 redirects to `/membership`.
