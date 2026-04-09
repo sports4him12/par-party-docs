@@ -96,18 +96,22 @@ When this alarm fires, go to `/golfsync-prod/api` and filter by `ERROR` in the 5
 ### Steps
 
 **1. Check if the account exists:**
+Admin dashboard → **Users** tab → search/scroll to find the user by email. The row shows `role`, `banned`, `membershipTier`, `trialExpiresAt`, `membershipExpiresAt` at a glance.
+
+If you need the raw record:
+```sql
+-- CloudWatch Insights → /golfsync-prod/api, or direct DB:
+SELECT id, email, username, role, banned, trial_expires_at,
+       membership_tier, membership_expires_at, created_at
+FROM users WHERE email = 'user@example.com';
 ```
-GET /api/admin/users
-```
-Find the user by email in the response list. Confirm `banned`, `role`, `trialExpiresAt`, `membershipTier`, `membershipExpiresAt`.
 
 **2. Check for ban:**
-Look for `"banned": true` on the user record. If banned, either the user was manually banned by an admin or reported and actioned. Check `/api/admin/user-reports` for context.
+Admin dashboard → **Users** tab → find the user → look for a **Ban** indicator in their row. If banned, check the **User Reports** tab for the report that triggered it.
 
-To unban via admin API:
-```
-PATCH /api/admin/users/{userId}
-Body: { "banned": false }
+To unban: Admin dashboard → Users tab → click the user → toggle the ban off. If the UI button is unavailable, run via DB:
+```sql
+UPDATE users SET banned = false WHERE email = 'user@example.com';
 ```
 
 **3. Check for password expiry:**
@@ -115,7 +119,7 @@ Passwords expire every 90 days (`golfsync.password.expiry-days`). The user will 
 
 **4. Search logs for login attempt:**
 ```sql
--- In CloudWatch Insights on /golfsync-prod/api
+-- CloudWatch Insights → /golfsync-prod/api
 fields @timestamp, @message
 | filter @message like /user@example.com/ and @message like /login/
 | sort @timestamp desc
@@ -143,19 +147,22 @@ Look for `"Invalid credentials"` or `ForbiddenException: This account has been s
 ### Steps
 
 **1. Check user's membership state:**
+Admin dashboard → **Users** tab → find the user. The row shows `membershipTier`, `trialExpiresAt`, and `membershipExpiresAt`.
+
+For `stripeCustomerId` / `stripeSubscriptionId` (needed to look them up in Stripe), query the DB:
+```sql
+SELECT email, membership_tier, membership_expires_at, trial_expires_at,
+       stripe_customer_id, stripe_subscription_id
+FROM users WHERE email = 'user@example.com';
 ```
-GET /api/admin/users  → find user → check fields:
-  trialExpiresAt      — when the trial ends
-  membershipTier      — FREE / MONTHLY / ANNUAL
-  membershipExpiresAt — when paid membership expires
-  stripeCustomerId    — links to Stripe dashboard
-  stripeSubscriptionId
-```
+
+Then open Stripe Dashboard → Customers → paste the `stripe_customer_id` to see the full subscription and payment history.
 
 **2. User paid but access not granted:**
 
 Check CloudWatch for the Stripe `checkout.session.completed` webhook:
 ```sql
+-- CloudWatch Insights → /golfsync-prod/api
 fields @timestamp, @message
 | filter @message like /checkout.session.completed/ and @message like /user@example.com/
 | sort @timestamp desc
@@ -168,19 +175,23 @@ checkout.session.completed: provisioned MONTHLY for user@example.com (expires ..
 
 If no log entry exists, the webhook was never received. Check the Stripe dashboard:
 - Stripe Dashboard → Developers → Webhooks → Endpoint `https://golfsync.com/api/payments/webhook`
-- Look for failed delivery attempts and re-send manually
+- Look for failed delivery attempts and re-send manually from there
 
 **3. Manually activate membership:**
-If Stripe webhook failed and the user has a confirmed payment, activate via admin API:
-```
-POST /api/admin/users/{userId}/membership
-Body: { "plan": "MONTHLY", "paymentIntentId": "pi_..." }
+If Stripe webhook failed and the user has a confirmed payment, fix directly in the DB:
+```sql
+UPDATE users
+SET membership_tier = 'MONTHLY',
+    membership_expires_at = DATE_ADD(NOW(), INTERVAL 1 MONTH)
+WHERE email = 'user@example.com';
+-- Use INTERVAL 1 YEAR for ANNUAL plans
 ```
 
 **4. Extend trial manually:**
-```
-PATCH /api/admin/users/{userId}
-Body: { "trialExpiresAt": "2026-05-31T23:59:59" }
+```sql
+UPDATE users
+SET trial_expires_at = '2026-05-31 23:59:59'
+WHERE email = 'user@example.com';
 ```
 
 ---
@@ -196,7 +207,7 @@ Body: { "trialExpiresAt": "2026-05-31T23:59:59" }
 
 **1. Check email send logs:**
 ```sql
--- CloudWatch Insights on /golfsync-prod/api
+-- CloudWatch Insights → /golfsync-prod/api
 fields @timestamp, @message
 | filter @message like /user@example.com/ and (@message like /email/ or @message like /mail/ or @message like /send/)
 | sort @timestamp desc
@@ -213,11 +224,11 @@ Failed to send reminder email to user@example.com: <SMTP error message>
 ```
 
 **2. Check for email marketing opt-out:**
-The user may have opted out of marketing emails. Check their record:
+Admin dashboard → **Users** tab → find the user → check `emailMarketingOptOut` column. Or query the DB:
+```sql
+SELECT email, email_marketing_opt_out, drip_emails_sent_mask FROM users WHERE email = 'user@example.com';
 ```
-GET /api/admin/users → find user → check emailMarketingOptOut: true
-```
-If opted out, trial drip and marketing emails are silently skipped (by design — CAN-SPAM compliance). This is expected behavior. Transactional emails (payment confirmation, payment failed, subscription cancelled) are NOT affected by opt-out.
+If `email_marketing_opt_out = 1`, trial drip and marketing emails are silently skipped (by design — CAN-SPAM compliance). This is expected behavior. Transactional emails (payment confirmation, payment failed, subscription cancelled) are NOT affected by opt-out.
 
 **3. Check SES sending limits (prod):**
 - AWS Console → SES → Account dashboard → Sending statistics
@@ -398,34 +409,41 @@ ps aux | grep java
 
 ---
 
-## 10. Reporting / Admin Dashboard
+## 10. Admin Dashboard — What's Where
 
-The admin panel at `/admin` (requires ADMIN role) surfaces:
+The admin panel at `https://golfsync.com/admin` requires an ADMIN-role account. Use the tabs across the top to navigate.
 
-- **Analytics:** signups/day, trial→paid conversions, active trials, churn, round creation rate
-- **Users:** full user list with membership state
-- **Rounds:** all rounds across all users
-- **Tournament reports:** user-submitted reports
-- **User reports:** reported accounts
-- **Promo codes:** create / list
-- **Featured content:** promoted courses and tournaments
-- **Camunda tasks:** pending BPMN workflow tasks
+| Tab | What you can do |
+|---|---|
+| **Analytics** | Signups/day, trial→paid conversions, active trials, churn rate, round creation rate |
+| **Users** | Full user list — membership state, ban status, role, opt-out; delete a user |
+| **Rounds** | All rounds across all users; update status (PENDING/BOOKED/COMPLETED/CANCELLED); delete |
+| **User Reports** | Reports submitted by users about other users; accept (ban) or deny with reason |
+| **Promo Codes** | Create new promo codes (FREE / % discount / flat discount); deactivate existing ones |
+| **Featured** | Promote courses and tournaments to appear highlighted in the app |
 
 ### Promoting a user to ADMIN role
 
-Currently requires a direct database update. Use ECS Exec to connect, or run from a bastion:
+The admin dashboard does not yet have a role-change UI. Update via DB:
 ```sql
 UPDATE users SET role = 'ADMIN' WHERE email = 'admin@golfsync.com';
 ```
 
-### Banning a user
+### Banning / unbanning a user
 
-```
-PATCH /api/admin/users/{userId}
-Body: { "banned": true }
-```
+Admin dashboard → **Users** tab → find the user → click **Ban** or **Unban**.
 
-Banned users receive HTTP 403 `"This account has been suspended."` on login.
+Banned users receive HTTP 403 `"This account has been suspended."` on their next login attempt.
+
+### Impersonating a user (for debugging)
+
+Admin dashboard → **Users** tab → click **Impersonate** on any user row. This sets your session to that user's account so you can reproduce the issue they're experiencing. All impersonation events are logged in CloudWatch:
+```sql
+-- CloudWatch Insights → /golfsync-prod/api
+fields @timestamp, @message
+| filter @message like /AUDIT impersonate/
+| sort @timestamp desc
+```
 
 ---
 
@@ -512,11 +530,12 @@ aws ecs run-task \
 When a user contacts support:
 
 1. Get their **email address** and the **approximate time** the issue occurred
-2. Search `/golfsync-prod/api` CloudWatch logs for their email in that window
-3. Check their user record via `GET /api/admin/users` (membership state, ban, opt-out)
-4. Check Stripe dashboard if payment-related
-5. Check SES sending statistics if email-related
-6. If the issue is a data corruption or requires a direct DB fix, use ECS Exec + MySQL to investigate, and never write without a migration
+2. Admin dashboard → **Users** tab — find the user, check membership state, ban status, opt-out
+3. Admin dashboard → **Analytics** tab — check overall health (not user-specific, but useful for outage context)
+4. CloudWatch Insights → `/golfsync-prod/api` — search by their email in the incident time window
+5. Stripe Dashboard → Customers — if payment-related, look up by `stripe_customer_id` from the DB
+6. AWS Console → SES → Sending statistics — if email delivery is suspect
+7. For data fixes, use ECS Exec + MySQL (§9 + §11) — **never write directly to prod DB without first understanding the cause**
 
 **Support email (current):** `ryanrpick@gmail.com`  
 **Permanent address (planned):** `support@golfsync.com` — update before public launch
