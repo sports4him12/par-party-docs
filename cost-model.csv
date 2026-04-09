@@ -1,0 +1,24 @@
+Category,Line Item,May-26,Jun-26,Jul-26,Aug-26,Sep-26,Oct-26,Nov-26,Dec-26,Total,Notes
+Assumptions,Active Users,0,0,1000,1000,1000,1000,1000,1000,,
+Assumptions,Conversion Rate,10.0%,10.0%,10.0%,10.0%,10.0%,10.0%,10.0%,10.0%,,
+Assumptions,Subscription Price,$9.99,$9.99,$9.99,$9.99,$9.99,$9.99,$9.99,$9.99,,
+,,,,,,,,,,
+Revenue,Monthly Recurring Revenue,$0,$0,$999,$999,$999,$999,$999,$999,$5994,100 paying users × $9.99
+,,,,,,,,,,
+Compute,ECS Fargate — API (Spring Boot + Camunda embedded),$100,$100,$100,$100,$100,$100,$100,$100,$800,"0.5 vCPU / 1 GB; Camunda runs in-process — no separate task"
+Compute,ECS Fargate — Next.js web,$50,$50,$50,$50,$50,$50,$50,$50,$400,0.25 vCPU / 0.5 GB
+Data,RDS MySQL (db.t3.micro Multi-AZ),$80,$80,$80,$80,$80,$80,$80,$80,$640,Multi-AZ for prod HA
+Data,ElastiCache Redis (cache.t3.micro),$25,$25,$25,$25,$25,$25,$25,$25,$200,AI conversation memory (24 h TTL); shared across ECS tasks
+Networking,ALB,$25,$25,$25,$25,$25,$25,$25,$25,$200,
+Networking,VPC Endpoints (S3 + ECR + Secrets Manager),$22,$22,$22,$22,$22,$22,$22,$22,$176,"~3 interface endpoints × $0.01/hr; replaces NAT Gateway (saved ~$53/mo)"
+Storage / CDN,CloudFront (static assets),$5,$5,$5,$5,$5,$5,$5,$5,$40,Low-traffic origin shield for Next.js static export
+Storage / CDN,ECR + Route53,$3,$3,$3,$3,$3,$3,$3,$3,$24,
+Ops,Secrets Manager,$5,$5,$5,$5,$5,$5,$5,$5,$40,
+Ops,CloudWatch Logs,$20,$20,$20,$20,$20,$20,$20,$20,$160,
+Dev Tools,Claude Max (developer subscription),$100,$100,$100,$100,$100,$100,$100,$100,$800,
+Third-Party APIs,OpenAI API (GPT-4o — AI booking assistant),$0,$0,$25,$25,$25,$25,$25,$25,$150,Usage-based; scales with active AI chat usage
+Third-Party APIs,AWS SES (transactional email),$0,$0,$1,$1,$1,$1,$1,$1,$6,~1000 emails/mo at $0.10/1000
+Third-Party APIs,Stripe processing fees (2.9% + $0.30),$0,$0,$29,$29,$29,$29,$29,$29,$174,"$999 MRR × 2.9% ≈ $29; no flat Stripe subscription fee"
+,,,,,,,,,,
+Summary,Total Operating Expenses,$435,$435,$490,$490,$490,$490,$490,$490,$3818,
+Summary,Net Earnings,-$435,-$435,$509,$509,$509,$509,$509,$509,$2176,
