@@ -12,7 +12,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **GolfNow cancellation handling** — Implement round cancellation according to GolfNow API requirements. Research GolfNow's cancellation policies (window, fees, confirmation flow) and mirror that logic in the `cancelRound` flow. Update the BPMN process and UI accordingly so users understand what happens when a booked tee time is cancelled.
 
-- [ ] **3-step onboarding flow** — After registration, guide new users through: (1) find/set home course, (2) invite a friend, (3) create first round. Currently users land on the dashboard with no guidance. This is the highest-leverage activation improvement available.
+- [x] **3-step onboarding flow** — After registration, guide new users through: (1) find/set home course, (2) invite a friend, (3) create first round. Currently users land on the dashboard with no guidance. This is the highest-leverage activation improvement available.
 
 - [ ] **Tournament Discovery — live feature** — Tournament Discovery is currently hidden ("Coming this Summer" teaser on landing page). When ready to launch: set `TOURNAMENTS_ENABLED=true`, restore the feature card on the landing page, and ensure the tournament database has national coverage beyond the current east-coast seed data.
 
@@ -34,9 +34,9 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **PWA / home screen install** — `manifest.json` + service worker so users can install GolfSync on their phone home screen.
 
-- [ ] **Full dunning email sequence** — Currently only the initial payment-failed email is sent. Add day-3 and day-7 follow-up emails before membership is downgraded. Also add a renewal reminder email 7 days before subscription expiry.
+- [x] **Full dunning email sequence** — Currently only the initial payment-failed email is sent. Add day-3 and day-7 follow-up emails before membership is downgraded. Also add a renewal reminder email 7 days before subscription expiry.
 
-- [ ] **How-to guide and FAQ updates for legal/compliance pages** — Update `app/how-to/account/page.tsx` and the FAQ in `app/support/page.tsx` to reflect: (a) the 5/31 launch trial period, (b) the email opt-out toggle in account settings, (c) the Terms / Privacy / Cookie pages.
+- [x] **How-to guide and FAQ updates for legal/compliance pages** — Update `app/how-to/account/page.tsx` and the FAQ in `app/support/page.tsx` to reflect: (a) the 5/31 launch trial period, (b) the email opt-out toggle in account settings, (c) the Terms / Privacy / Cookie pages.
 
 ---
 
@@ -90,6 +90,17 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 | Date | Item |
 |------|------|
+| 2026-04-09 | Full dunning email sequence — day-3 and day-7 follow-up emails after failed payment (DunningService, bitmask pattern); renewal reminder 7 days before expiry; MembershipService idempotency guard; DunningServiceTest (9 tests) |
+| 2026-04-09 | 3-step onboarding wizard — `/onboarding` page (find home course → invite friend → create first round, each skippable); registration redirects to `/onboarding`; `POST /api/users/me/complete-onboarding`; `onboarding_completed` column (migration 037) |
+| 2026-04-09 | Feedback section — `user_feedback` table (migration 038); `POST /api/feedback` (upsert per user), `GET /api/feedback/me`, `GET /api/feedback` (admin); feedback widget on account page; Feedback tab in admin portal |
+| 2026-04-09 | Booker auto-accepted on round creation — creator now added as ACCEPTED RoundPlayer when creating a round |
+| 2026-04-09 | "Golf Sync" branding — renamed GolfSync → Golf Sync across all TSX/TS files (29 files) including metadata title/description |
+| 2026-04-09 | Accept Invite moved to top of round detail page — prominent navy banner below navbar when status === INVITED |
+| 2026-04-09 | Friends Recent Scores moved to left sidebar — now appears under Friend Leaderboard card on dashboard |
+| 2026-04-09 | Handicap editing on account page — number input with Update button calling PUT /api/users/me |
+| 2026-04-09 | Booking Test #2 bug — root cause was Recent Rounds capped at 5; increased to 10 and created /rounds listing page with status filter tabs |
+| 2026-04-09 | Friend autocomplete on new round form — tag-pill system with friend suggestions on the invitees field when attesting a booking |
+| 2026-04-09 | How-to guide + FAQ updated — launch trial period (5/31), email opt-out, Terms/Privacy/Cookie links |
 | 2026-04-09 | GolfNow exit interstitial + non-affiliation disclaimers — `ExternalLinkModal` shown before opening GolfNow; inline disclaimer on booking page; Terms of Service non-endorsement clause strengthened |
 | 2026-04-09 | "Coming this Summer" teaser on landing page — Tournament Discovery and Refer a Friend shown as dashed-border coming-soon cards in the features section |
 | 2026-04-09 | Membership page messaging updated — green launch-period banner; both plans show identical feature lists; no fake plan differentiation; "no charge until June 1, 2026" messaging throughout |
