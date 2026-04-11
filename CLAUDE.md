@@ -35,6 +35,7 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
 - When a new env var is added to `application.properties`, it **must** be added to both `.env.dev` (with a sensible local default or placeholder) and `.env.prod.example` (with a comment pointing to the Secrets Manager secret name).
 
 # CDK Change Safety
+- **MANDATORY — always deploy via `scripts/deploy.sh <dev|prod>`**, never `cdk deploy` directly. The script enforces: SSO session check → `cdk diff` review → Liquibase migrations → deploy → ECS stabilization watch.
 - **MANDATORY — always run `npx cdk diff` before `cdk deploy`** and read the output for `(requires replacement)` warnings. A replacement on a stateful resource (RDS, VPC, security group) means the old resource is deleted and recreated — treat this as a breaking change requiring a maintenance window.
 - **Never rename a CDK construct** after it has been deployed. Renaming changes the CloudFormation logical ID, which causes delete + create (data loss on RDS, traffic drop on ECS services). Instead, add a new construct alongside the old one and migrate.
 - **Liquibase must run before any API deploy that includes DB migrations.** Use the `LiquibaseMigrateCommand` from the CDK outputs, wait for exit code 0, then deploy. Skipping this causes the API to fail its health check and the circuit breaker fires.
