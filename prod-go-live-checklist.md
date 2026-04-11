@@ -47,17 +47,17 @@ Work through this top to bottom. Every item must be checked before real users ar
 
 ## 3. DNS & SSL (Prod only)
 
-- [ ] `golfsync.com` domain registered at a registrar
-- [ ] Route53 hosted zone created for `golfsync.com`:
+- [ ] `golfsync.io` domain registered at a registrar
+- [ ] Route53 hosted zone created for `golfsync.io`:
   ```bash
-  aws route53 create-hosted-zone --name golfsync.com --caller-reference $(date +%s) --profile golfsync-prod
+  aws route53 create-hosted-zone --name golfsync.io --caller-reference $(date +%s) --profile golfsync-prod
   ```
 - [ ] Domain registrar nameservers updated to match the 4 NS records Route53 provides
 - [ ] ACM certificate requested (must be in `us-east-1`):
   ```bash
   aws acm request-certificate \
-    --domain-name golfsync.com \
-    --subject-alternative-names '*.golfsync.com' \
+    --domain-name golfsync.io \
+    --subject-alternative-names '*.golfsync.io' \
     --validation-method DNS \
     --region us-east-1 \
     --profile golfsync-prod
@@ -179,10 +179,22 @@ All of these are created by CDK with placeholder values. Replace them before tra
     --profile golfsync-prod
   ```
 
-### Auto-generated — no action needed
+### Auto-generated but must be rotated — action required
 
-- `golfsync-prod/db-credentials` — random 32-char password, created by CDK
-- `golfsync-prod/jwt-secret` — random 64-char key, created by CDK
+- `golfsync-prod/db-credentials` — random 32-char password, created by CDK; no action needed
+- [ ] JWT secret — CDK creates it with a placeholder; replace with the rotated key after first deploy:
+  ```bash
+  aws secretsmanager update-secret \
+    --secret-id golfsync-prod/jwt-secret \
+    --secret-string 'e436de43759da4931ab9f9ffa244752a7a5240913da12312d88d51f398bc8bf532f865a6edc74c123f17cf24acc2c3a5dbe8701b9e622daf7a35c7befbe4ecd8' \
+    --profile golfsync-prod \
+    --region us-east-1
+  ```
+  After updating, force a rolling ECS deployment to pick up the new value (running tasks cache secrets at start):
+  ```bash
+  aws ecs update-service --cluster golfsync-prod --service <ApiServiceName> --force-new-deployment \
+    --profile golfsync-prod --region us-east-1
+  ```
 
 ---
 
@@ -197,7 +209,7 @@ All of these are created by CDK with placeholder values. Replace them before tra
 - [ ] Test email sent and received:
   ```bash
   aws ses send-email \
-    --from noreply@golfsync.com \
+    --from noreply@golfsync.io \
     --to your-inbox@example.com \
     --subject "GolfSync SES test" \
     --text "SES is working." \
@@ -214,8 +226,8 @@ All of these are created by CDK with placeholder values. Replace them before tra
   2. Connect to RDS via SSM port-forward (see `AWS_DeploymentGuide.md` § Step 7)
   3. `UPDATE users SET password_hash='<hash>' WHERE username='admin';`
 - [ ] Admin email updated from `admin@golfsync.io` to a real monitored inbox
-- [ ] Admin login verified at `https://golfsync.com/login`
-- [ ] Admin portal verified at `https://golfsync.com/admin`
+- [ ] Admin login verified at `https://golfsync.io/login`
+- [ ] Admin portal verified at `https://golfsync.io/admin`
 
 ---
 
@@ -226,7 +238,7 @@ All of these are created by CDK with placeholder values. Replace them before tra
 - [ ] Annual price created in Stripe Dashboard: **$79.99/year recurring**
 - [ ] `STRIPE_MONTHLY_PRICE_ID` and `STRIPE_ANNUAL_PRICE_ID` set in prod ECS task environment
 - [ ] Webhook endpoint registered in Stripe Dashboard:
-  - URL: `https://golfsync.com/api/stripe/webhook`
+  - URL: `https://golfsync.io/api/stripe/webhook`
   - Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - [ ] Webhook signing secret (`whsec_...`) stored in `golfsync-prod/stripe-webhook-secret`
 - [ ] `STRIPE_ENABLED=true` set in prod ECS task (update CDK or set directly before June 1)
@@ -244,9 +256,9 @@ All of these are created by CDK with placeholder values. Replace them before tra
 
 ## 11. Security Verification
 
-- [ ] `https://golfsync.com` loads (HTTPS enforced)
-- [ ] `http://golfsync.com` redirects to `https://golfsync.com`
-- [ ] `www.golfsync.com` resolves correctly
+- [ ] `https://golfsync.io` loads (HTTPS enforced)
+- [ ] `http://golfsync.io` redirects to `https://golfsync.io`
+- [ ] `www.golfsync.io` resolves correctly
 - [ ] Auth cookie is `HttpOnly; Secure; SameSite=Strict` (check browser DevTools → Application → Cookies)
 - [ ] `COOKIE_SECURE=true` confirmed (CDK sets this automatically for prod)
 - [ ] Admin password is not `GolfSync1!` (dev seed password — never reaches prod, but verify)
