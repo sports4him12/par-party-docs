@@ -34,6 +34,12 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
   - `.env.prod.example` — committed reference showing what prod needs; actual values come from CDK/Secrets Manager
 - When a new env var is added to `application.properties`, it **must** be added to both `.env.dev` (with a sensible local default or placeholder) and `.env.prod.example` (with a comment pointing to the Secrets Manager secret name).
 
+# Accessibility
+- **MANDATORY — do this automatically, without being asked, as part of every UI or visual change:**
+  - All UI changes must comply with ADA and WCAG AAA standards (7:1 contrast ratio for normal text, 4.5:1 for large text, minimum 44×44px touch targets, `aria-label`/`aria-hidden` on all icons and decorative elements, `aria-live` on dynamic content, `htmlFor`/`id` pairs on all form inputs, focus-visible styles, prefers-reduced-motion support)
+  - After making any UI change, audit the affected components for WCAG AAA violations before committing
+  - Never ship UI changes that introduce new accessibility regressions
+
 # Documentation
 - When adding or modifying user-facing features, always update `golfsync-web/app/how-to/page.tsx` (How To Guide) and the `faqs` array in `golfsync-web/app/support/page.tsx` (FAQ) as relevant.
 - **MANDATORY — do this automatically, without being asked:** When a change requires any AWS infrastructure update — new env vars injected into ECS tasks, new Secrets Manager secrets, new IAM permissions, new services or stacks, changed health check paths, or any other deployment-time configuration — update both the CDK stack(s) in `golfsync-cdk/` and `AWS_DeploymentGuide.md` in the same commit as the application change. Do not leave infrastructure and code out of sync.
