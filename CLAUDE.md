@@ -34,6 +34,12 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
   - `.env.prod.example` — committed reference showing what prod needs; actual values come from CDK/Secrets Manager
 - When a new env var is added to `application.properties`, it **must** be added to both `.env.dev` (with a sensible local default or placeholder) and `.env.prod.example` (with a comment pointing to the Secrets Manager secret name).
 
+# Cross-Platform Parity
+- **MANDATORY — do this automatically, without being asked, as part of every feature or UI change:**
+  - Any change to a user-facing feature, screen, or API contract must be cross-checked for feasibility and implementation across **both** the web app (`golfsync-web/`) and the mobile app (`golfsync-mobile/`)
+  - If the change applies to both platforms, implement it on both in the same commit (or note explicitly why one platform is excluded)
+  - If a platform gap exists (e.g. a web-only API not yet supported on mobile), call it out as a follow-up TODO in the commit message — do not silently leave one platform behind
+
 # Accessibility
 - **MANDATORY — do this automatically, without being asked, as part of every UI or visual change:**
   - All UI changes must comply with ADA and WCAG AAA standards (7:1 contrast ratio for normal text, 4.5:1 for large text, minimum 44×44px touch targets, `aria-label`/`aria-hidden` on all icons and decorative elements, `aria-live` on dynamic content, `htmlFor`/`id` pairs on all form inputs, focus-visible styles, prefers-reduced-motion support)
