@@ -274,7 +274,7 @@ Run these manually after deploy, before announcing to any users:
 - [ ] Log in with new account
 - [ ] Password reset flow — reset email received, link works
 - [ ] Create a round
-- [ ] Invite a friend (by username)
+- [ ] Invite a friend (search by username or name; verify "✓ Pending" badge appears after sending)
 - [ ] Membership page loads at `/membership`
 - [ ] Support form at `/support#contact` submits and confirmation email received
 - [ ] `/terms` and `/privacy` pages load
@@ -299,7 +299,7 @@ Do not do this before June 1. Come back to this section on billing day.
 ## 14. Open Business Decisions (block soft launch or June 1)
 
 - [ ] **GolfNow API** — negotiate partnership or reposition as "round management" and remove tee-time promise. Currently mocked. Blocking real marketing.
-- [ ] **3-step onboarding flow** — already built; verify it appears for new registrations
+- [ ] **2-step onboarding flow** — registration redirects to `/onboarding` (Step 1: Invite a Friend, Step 2: Book Your First Round). Home Course step removed (not yet relevant). Verify it appears for new registrations.
 - [ ] **support@golfsync.io inbox** — confirm it is monitored before users can contact you
 
 ---

@@ -92,7 +92,14 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 | Date | Item |
 |------|------|
-| 2026-04-09 | Full dunning email sequence — day-3 and day-7 follow-up emails after failed payment (DunningService, bitmask pattern); renewal reminder 7 days before expiry; MembershipService idempotency guard; DunningServiceTest (9 tests) |
+| 2026-04-11 | Friend search now matches on name field in addition to username — "Sutton" finds users whose display name is Sutton even if their username differs |
+| 2026-04-11 | Friend request pending badge — clicking "Add Friend" on the Friends page now shows a "✓ Pending" badge inline instead of removing the user from results |
+| 2026-04-11 | Friends Recent Scores "Unknown Course" bug fixed — score feed now falls back to courseNameText when no linked Course entity exists |
+| 2026-04-11 | Friends Recent Scores cards made non-interactive — removed link wrapper; non-participants get 403 on round detail, so cards now display score info only |
+| 2026-04-11 | Onboarding reduced to 2 steps — Home Course step hidden (not yet relevant); flow is now: Invite a Friend → Book Your First Round |
+| 2026-04-11 | AI Booking Assistant date bug fixed — added getCurrentDate() tool so agent computes relative dates correctly instead of guessing |
+| 2026-04-11 | www.golfsync.io CORS fix — ALB redirect rule added (priority 5) to redirect www → apex before CORS filter runs |
+| 2026-04-11 | Full dunning email sequence — day-3 and day-7 follow-up emails after failed payment (DunningService, bitmask pattern); renewal reminder 7 days before expiry; MembershipService idempotency guard; DunningServiceTest (9 tests) |
 | 2026-04-09 | 3-step onboarding wizard — `/onboarding` page (find home course → invite friend → create first round, each skippable); registration redirects to `/onboarding`; `POST /api/users/me/complete-onboarding`; `onboarding_completed` column (migration 037) |
 | 2026-04-09 | Feedback section — `user_feedback` table (migration 038); `POST /api/feedback` (upsert per user), `GET /api/feedback/me`, `GET /api/feedback` (admin); feedback widget on account page; Feedback tab in admin portal |
 | 2026-04-09 | Booker auto-accepted on round creation — creator now added as ACCEPTED RoundPlayer when creating a round |

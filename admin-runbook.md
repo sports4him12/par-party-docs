@@ -1,7 +1,7 @@
 # GolfSync — Admin & Troubleshooting Runbook
 
 **Audience:** Admin operators responding to user issues or system alerts  
-**Last updated:** 2026-04-09
+**Last updated:** 2026-04-11
 
 ---
 
