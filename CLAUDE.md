@@ -34,6 +34,17 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
   - `.env.prod.example` — committed reference showing what prod needs; actual values come from CDK/Secrets Manager
 - When a new env var is added to `application.properties`, it **must** be added to both `.env.dev` (with a sensible local default or placeholder) and `.env.prod.example` (with a comment pointing to the Secrets Manager secret name).
 
+# CDK Change Safety
+- **MANDATORY — always run `npx cdk diff` before `cdk deploy`** and read the output for `(requires replacement)` warnings. A replacement on a stateful resource (RDS, VPC, security group) means the old resource is deleted and recreated — treat this as a breaking change requiring a maintenance window.
+- **Never rename a CDK construct** after it has been deployed. Renaming changes the CloudFormation logical ID, which causes delete + create (data loss on RDS, traffic drop on ECS services). Instead, add a new construct alongside the old one and migrate.
+- **Liquibase must run before any API deploy that includes DB migrations.** Use the `LiquibaseMigrateCommand` from the CDK outputs, wait for exit code 0, then deploy. Skipping this causes the API to fail its health check and the circuit breaker fires.
+- **Health check paths are hot.** If the ALB health check path changes (e.g. `/health` → `/healthz`), the ALB starts using the new path immediately. All running tasks must already serve the new path or they will be drained. Deploy the path change to the application first, then update CDK.
+- **Secrets are read at container start.** Rotating a Secrets Manager secret does not affect running tasks — they keep the old value until restarted. After rotating, trigger a rolling update (force a new deployment) to pick up the new value.
+- **Safe to update freely** (in-place, no downtime): container image, environment variables, CloudWatch alarms, autoscaling targets, IAM policy additions, Secrets Manager values.
+- **High risk** (check `cdk diff` for `requires replacement`): RDS engine version, RDS storage type, VPC CIDR/subnet changes, security group ID references in resource properties, CloudFront distribution properties.
+- **Prod stack has termination protection enabled** — `cdk destroy GolfSyncProdStack` will be refused by CloudFormation. To tear down prod: disable termination protection in the Console first.
+- **Prod ALB has deletion protection enabled** — same pattern; must be disabled in the Console before the ALB can be removed.
+
 # Cross-Platform Parity
 - **MANDATORY — do this automatically, without being asked, as part of every feature or UI change:**
   - Any change to a user-facing feature, screen, or API contract must be cross-checked for feasibility and implementation across **both** the web app (`golfsync-web/`) and the mobile app (`golfsync-mobile/`)
