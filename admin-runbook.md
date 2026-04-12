@@ -174,7 +174,7 @@ checkout.session.completed: provisioned MONTHLY for user@example.com (expires ..
 ```
 
 If no log entry exists, the webhook was never received. Check the Stripe dashboard:
-- Stripe Dashboard → Developers → Webhooks → Endpoint `https://golfsync.com/api/payments/webhook`
+- Stripe Dashboard → Developers → Webhooks → Endpoint `https://golfsync.com/api/stripe/webhook`
 - Look for failed delivery attempts and re-send manually from there
 
 **3. Manually activate membership:**
@@ -266,7 +266,7 @@ The drip sequence uses a bitmask (`dripEmailsSentMask`) to track which emails we
 ### Steps
 
 **1. Check Stripe webhook delivery:**
-Stripe Dashboard → Developers → Webhooks → `https://golfsync.com/api/payments/webhook`
+Stripe Dashboard → Developers → Webhooks → `https://golfsync.com/api/stripe/webhook`
 
 Events to look for:
 - `checkout.session.completed` — subscription provisioned
@@ -538,3 +538,89 @@ When a user contacts support:
 7. For data fixes, use ECS Exec + MySQL (§9 + §11) — **never write directly to prod DB without first understanding the cause**
 
 **Support email:** `support@golfsync.io`
+
+---
+
+## 14. Production Rollback
+
+Every successful `./scripts/deploy.sh prod` run automatically creates a git tag
+(`prod-YYYY-MM-DD-HHmm`) on the parent monorepo and all submodules.
+Two rollback paths are available depending on the situation.
+
+---
+
+### Scenario A — Fast rollback: revert app code without rebuilding (~2 min)
+
+ECS keeps every task definition revision forever. This swaps the running containers
+back to the previous image with no Docker rebuild. Use this when the DB schema is
+unchanged or the new migration is safely additive (the old app can run against it).
+
+```bash
+# 1. Find the current revision number for each service
+aws ecs describe-task-definition \
+  --task-definition golfsync-prod-ApiTaskDef \
+  --profile golfsync-prod \
+  --query 'taskDefinition.revision'
+
+aws ecs describe-task-definition \
+  --task-definition golfsync-prod-WebTaskDef \
+  --profile golfsync-prod \
+  --query 'taskDefinition.revision'
+
+# 2. Roll back to revision N-1 (replace <N-1> with the previous number)
+aws ecs update-service \
+  --cluster golfsync-prod \
+  --service ApiService \
+  --task-definition golfsync-prod-ApiTaskDef:<N-1> \
+  --force-new-deployment \
+  --profile golfsync-prod
+
+aws ecs update-service \
+  --cluster golfsync-prod \
+  --service WebService \
+  --task-definition golfsync-prod-WebTaskDef:<N-1> \
+  --force-new-deployment \
+  --profile golfsync-prod
+
+# 3. Wait for services to stabilize
+aws ecs wait services-stable \
+  --cluster golfsync-prod \
+  --services ApiService WebService \
+  --profile golfsync-prod
+```
+
+---
+
+### Scenario B — Full rollback: restore a prior tagged release and redeploy
+
+Use this when you need to roll back further than one revision, or when a CDK
+infrastructure change (not just app code) needs to be reverted.
+
+```bash
+# 1. List available prod release tags (most recent first)
+git tag -l 'prod-*' | sort -r | head -20
+
+# 2. Check out the target release in the parent repo and all submodules
+git checkout prod-2026-04-11-1430
+git submodule update --init --recursive
+
+# 3. Verify the submodule SHAs look correct
+git submodule status
+
+# 4. Redeploy — the script rebuilds Docker images from the checked-out source
+./scripts/deploy.sh prod
+
+# 5. After the rollback is confirmed good, return to latest main
+git checkout main
+git submodule update --init --recursive
+```
+
+---
+
+### DB migration caveat
+
+Liquibase migrations are **not automatically reversible**. Rolling back the app does
+not roll back the DB schema. Additive changes (new columns with defaults, new tables)
+are safe — the old app can run against the new schema. Destructive changes (column
+drops, renames) require a manually written rollback script. Write that script before
+merging any destructive migration.

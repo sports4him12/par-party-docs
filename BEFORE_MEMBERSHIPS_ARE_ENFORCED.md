@@ -54,7 +54,7 @@ The webhook code is ready but the endpoint must be manually registered in the St
 - [ ] In the Stripe Dashboard → Developers → Webhooks, add endpoint: `https://golfsync.io/api/stripe/webhook`
 - [ ] Select these events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - [ ] Copy the `whsec_...` signing secret and set `STRIPE_WEBHOOK_SECRET` in Secrets Manager
-- [ ] Fix the wrong path in `golfsync-docs/admin-runbook.md` line 30 — it currently says `/api/payments/webhook` but the correct path is `/api/stripe/webhook`
+- [x] Fix the wrong path in `golfsync-docs/admin-runbook.md` — corrected from `/api/payments/webhook` to `/api/stripe/webhook`
 
 ---
 
