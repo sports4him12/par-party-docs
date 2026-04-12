@@ -20,7 +20,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **Direct Tee Time Booking — live feature** — Direct booking is listed as "Coming this Summer" on the landing page. Requires a course partner API or proprietary booking layer that removes the GolfNow redirect. When ready: integrate booking API, surface the booking flow within the round creation UX, and remove the teaser card from the landing page.
 
-- [ ] **Membership billing activation** — Stripe is integrated but billing does not begin until June 1, 2026. Before that date: confirm Stripe live keys are populated in Secrets Manager, switch `STRIPE_ENABLED=true` in prod, verify webhook endpoint is registered in the Stripe dashboard, and send a pre-billing heads-up email to all users. Full dunning sequence (day 3 and day 7 follow-up after failed payment) is not yet implemented.
+- [ ] **Membership billing activation** — Stripe is integrated but billing does not begin until the enforcement date (TBD). Full pre-launch checklist tracked in `golfsync-docs/BEFORE_MEMBERSHIPS_ARE_ENFORCED.md`. Key open items: populate Stripe live keys in Secrets Manager, create monthly/annual price IDs in Stripe Dashboard, register webhook endpoint, and align trial expiry dates across all users before go-live.
 
 ---
 
@@ -92,6 +92,9 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 | Date | Item |
 |------|------|
+| 2026-04-12 | Welcome email on registration — `EmailService.sendWelcomeEmail()` fires immediately on signup with onboarding steps and no trial/membership language; replaces the deferred Day 0 drip email that was paused |
+| 2026-04-12 | Trial drip Day 0/21/27 paused — welcome, ending-soon, and last-chance emails commented out in `TrialDripService` until membership enforcement date is finalized; Day 3 and Day 7 nudges remain active |
+| 2026-04-12 | BEFORE_MEMBERSHIPS_ARE_ENFORCED checklist — `golfsync-docs/BEFORE_MEMBERSHIPS_ARE_ENFORCED.md` created covering Stripe keys, price IDs, webhook registration, trial alignment, and drip email re-enablement |
 | 2026-04-11 | Friend search now matches on name field in addition to username — "Sutton" finds users whose display name is Sutton even if their username differs |
 | 2026-04-11 | Friend request pending badge — clicking "Add Friend" on the Friends page now shows a "✓ Pending" badge inline instead of removing the user from results |
 | 2026-04-11 | Friends Recent Scores "Unknown Course" bug fixed — score feed now falls back to courseNameText when no linked Course entity exists |
