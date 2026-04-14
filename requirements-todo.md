@@ -92,6 +92,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 | Date | Item |
 |------|------|
+| 2026-04-14 | TOURNAMENT_SUPPORT role — new Role enum value; `TournamentAdminController` gives TOURNAMENT_SUPPORT access to all featured/curated tournament and tournament report admin endpoints; ADMIN retains full access; `SecurityConfig` updated with tournament path matchers before the ADMIN catch-all; admin panel shows "Tournament Management" view for TOURNAMENT_SUPPORT with only Featured/Reports tabs; ADMIN can assign roles via a dropdown in the Users tab (`PUT /api/admin/users/{id}/role`); manual curated-tournament writes set `adminLocked=true` preventing Serper refresh overwrites; 20+ new unit tests (TournamentAdminControllerTest) + Cypress E2E tests for role-gating and role assignment; admin-runbook.md updated with role matrix and TOURNAMENT_SUPPORT documentation |
 | 2026-04-12 | Welcome email on registration — `EmailService.sendWelcomeEmail()` fires immediately on signup with onboarding steps and no trial/membership language; replaces the deferred Day 0 drip email that was paused |
 | 2026-04-12 | Trial drip Day 0/21/27 paused — welcome, ending-soon, and last-chance emails commented out in `TrialDripService` until membership enforcement date is finalized; Day 3 and Day 7 nudges remain active |
 | 2026-04-12 | BEFORE_MEMBERSHIPS_ARE_ENFORCED checklist — `golfsync-docs/BEFORE_MEMBERSHIPS_ARE_ENFORCED.md` created covering Stripe keys, price IDs, webhook registration, trial alignment, and drip email re-enablement |
