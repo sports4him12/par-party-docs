@@ -1,7 +1,7 @@
-# GolfSync — Admin & Troubleshooting Runbook
+# Golf Sync — Admin & Troubleshooting Runbook
 
 **Audience:** Admin operators responding to user issues or system alerts  
-**Last updated:** 2026-04-11
+**Last updated:** 2026-04-17
 
 ---
 
@@ -11,26 +11,27 @@
 |---|---|
 | All API errors | CloudWatch → `/golfsync-prod/api` |
 | DB migration output | CloudWatch → `/golfsync-prod/liquibase` |
-| Error rate alarm | CloudWatch Alarms → `golfsync-prod-api-error-rate` |
-| Admin dashboard | `https://golfsync.com/admin` (ADMIN role required) |
-| Admin API | `GET /api/admin/analytics`, `GET /api/admin/users` |
-| Health check | `GET /api/courses` → 200 means API is up |
-| Live container shell | `aws ecs execute-command` (see §9) |
+| CloudWatch alarms | CloudWatch Alarms → `golfsync-prod-*` (8 critical alarms) |
+| Uptime monitoring | CloudWatch Alarms → `golfsync-prod-uptime-down` |
+| Operations dashboard | CloudWatch Dashboards → `golfsync-prod` |
+| Admin dashboard | `https://golfsync.io/admin` (ADMIN role required) |
+| Tournament management | `https://golfsync.io/admin` → Tournaments tab (ADMIN or TOURNAMENT_SUPPORT) |
+| Health check | `GET /health` → 200 means API is up |
 
 ---
 
 ## 1. CloudWatch Log Groups
 
-All logs are structured and shipped via the AWS Logs driver on the ECS task.
+All logs are structured JSON and shipped via the AWS Logs driver on the ECS task.
 
 | Log Group | What's in it | Retention |
 |---|---|---|
-| `/golfsync-prod/api` | All Spring Boot output — requests, errors, Stripe events, email sends, Camunda | 90 days |
+| `/golfsync-prod/api` | All Spring Boot output — requests, errors, Stripe events, email sends, AI assistant | 90 days |
 | `/golfsync-dev/api` | Same for dev stack | 30 days |
 | `/golfsync-prod/liquibase` | Liquibase migration runs — schema change history | 90 days |
 | `/golfsync-dev/liquibase` | Same for dev stack | 30 days |
 
-**Log stream naming:** `api/<task-id>` within each log group. Each ECS task start creates a new stream. Filter by time to scope to the incident window.
+**Log stream naming:** `api/<container-id>` within each log group. Each ECS task start creates a new stream.
 
 ### Navigating to logs
 
@@ -38,7 +39,7 @@ All logs are structured and shipped via the AWS Logs driver on the ECS task.
 2. Open `/golfsync-prod/api`
 3. Click **Search log group** (top right)
 4. Set time range to the incident window
-5. Enter a filter pattern (see §2 for patterns)
+5. Enter a filter pattern (see below)
 
 ### Useful CloudWatch Insights queries
 
@@ -48,11 +49,6 @@ fields @timestamp, @message
 | filter @message like /ERROR/
 | sort @timestamp desc
 | limit 100
-
--- Errors for a specific user email
-fields @timestamp, @message
-| filter @message like /user@example.com/
-| sort @timestamp desc
 
 -- Stripe webhook events
 fields @timestamp, @message
@@ -69,74 +65,79 @@ fields @timestamp, @message
 | filter @message like /Failed to send/ or @message like /MailException/
 | sort @timestamp desc
 
--- Rate limit hits (429 responses)
+-- Rate limit hits
 fields @timestamp, @message
-| filter @message like /429/ or @message like /Rate limit/
+| filter @message like /Rate limit/
+| sort @timestamp desc
+
+-- Content moderation blocks
+fields @timestamp, @message
+| filter @message like /Message blocked/ or @message like /moderation/
+| sort @timestamp desc
+
+-- Tournament discovery
+fields @timestamp, @message
+| filter @message like /Discovered/ or @message like /tournament discovery/
+| sort @timestamp desc
+
+-- Auth events (login failures, lockouts)
+fields @timestamp, @message
+| filter @message like /AUTH /
+| sort @timestamp desc
+
+-- Audit trail (admin actions)
+fields @timestamp, @message
+| filter @message like /AUDIT/
 | sort @timestamp desc
 ```
 
 ---
 
-## 2. CloudWatch Alarm
+## 2. CloudWatch Alarms (Prod Only)
 
-**Alarm name:** `golfsync-prod-api-error-rate`  
-**Trigger:** 5 or more ERROR-level log events in any 5-minute window  
-**Action:** SNS → email to `GOLFSYNC_PROD_ALARM_EMAIL`
+Prod has 8 critical alarms. Dev has none (dev is only up during deploys).
 
-When this alarm fires, go to `/golfsync-prod/api` and filter by `ERROR` in the 5-minute window that triggered it.
+| Alarm | Trigger | What to do |
+|---|---|---|
+| `golfsync-prod-api-error-rate` | 5+ ERROR logs in 5 min | Check `/golfsync-prod/api` for errors |
+| `golfsync-prod-api-cpu-critical` | CPU > 85% for 10 min | May need more ECS tasks or larger task |
+| `golfsync-prod-api-memory-critical` | Memory > 90% for 10 min | OOM risk — check for memory leaks |
+| `golfsync-prod-api-tasks-critical` | Running tasks < 2 | Deploy failure or crash loop — check ECS |
+| `golfsync-prod-rds-cpu-critical` | RDS CPU > 85% for 10 min | Slow queries — check RDS Performance Insights |
+| `golfsync-prod-rds-storage-critical` | Free storage < 2 GB | Expand storage immediately in RDS Console |
+| `golfsync-prod-alb-5xx-critical` | 5xx rate > 5% | Service degraded — check API logs |
+| `golfsync-prod-uptime-down` | /health unreachable 2+ min | Site may be down — check ECS + ALB |
+
+All alarms route to SNS → email.
 
 ---
 
 ## 3. Issue: User Cannot Log In
 
-### Symptoms
-- User reports "Invalid credentials" error
-- User reports being locked out
+### Steps (all via Admin Dashboard)
 
-### Steps
+1. **Admin Dashboard → Users tab** → search/scroll to find the user by email
+2. Check the row for: `role`, `banned` status, `membershipTier`, `trialExpiresAt`
+3. If **banned**: check **User Reports** tab for the report that triggered it. Unban via the Users tab toggle.
+4. If **password expired**: passwords expire every 90 days. Direct the user to `/change-password`.
+5. If **account locked**: after 5 failed login attempts, accounts lock for 15 minutes. This resolves automatically — no admin action needed.
 
-**1. Check if the account exists:**
-Admin dashboard → **Users** tab → search/scroll to find the user by email. The row shows `role`, `banned`, `membershipTier`, `trialExpiresAt`, `membershipExpiresAt` at a glance.
+### Checking logs (if needed)
 
-If you need the raw record:
-```sql
--- CloudWatch Insights → /golfsync-prod/api, or direct DB:
-SELECT id, email, username, role, banned, trial_expires_at,
-       membership_tier, membership_expires_at, created_at
-FROM users WHERE email = 'user@example.com';
-```
-
-**2. Check for ban:**
-Admin dashboard → **Users** tab → find the user → look for a **Ban** indicator in their row. If banned, check the **User Reports** tab for the report that triggered it.
-
-To unban: Admin dashboard → Users tab → click the user → toggle the ban off. If the UI button is unavailable, run via DB:
-```sql
-UPDATE users SET banned = false WHERE email = 'user@example.com';
-```
-
-**3. Check for password expiry:**
-Passwords expire every 90 days (`golfsync.password.expiry-days`). The user will see "PASSWORD_EXPIRED" with HTTP 401. Direct them to `/change-password`.
-
-**4. Search logs for login attempt:**
 ```sql
 -- CloudWatch Insights → /golfsync-prod/api
 fields @timestamp, @message
-| filter @message like /user@example.com/ and @message like /login/
+| filter @message like /AUTH/ and @message like /locked\|failed\|banned/
 | sort @timestamp desc
 ```
 
-Look for `"Invalid credentials"` or `ForbiddenException: This account has been suspended.`
+Note: Auth logs use userId only (no email addresses logged for privacy).
 
 ---
 
 ## 4. Issue: User Can't Access Features (Trial / Membership)
 
-### Symptoms
-- User sees "Your free access period has ended" banner
-- User gets 403 responses from the API
-- User reports being locked out after paying
-
-### Error codes returned by the API (HTTP 403)
+### Error codes (HTTP 403)
 
 | Code | Meaning |
 |---|---|
@@ -146,515 +147,232 @@ Look for `"Invalid credentials"` or `ForbiddenException: This account has been s
 
 ### Steps
 
-**1. Check user's membership state:**
-Admin dashboard → **Users** tab → find the user. The row shows `membershipTier`, `trialExpiresAt`, and `membershipExpiresAt`.
-
-For `stripeCustomerId` / `stripeSubscriptionId` (needed to look them up in Stripe), query the DB:
-```sql
-SELECT email, membership_tier, membership_expires_at, trial_expires_at,
-       stripe_customer_id, stripe_subscription_id
-FROM users WHERE email = 'user@example.com';
-```
-
-Then open Stripe Dashboard → Customers → paste the `stripe_customer_id` to see the full subscription and payment history.
-
-**2. User paid but access not granted:**
-
-Check CloudWatch for the Stripe `checkout.session.completed` webhook:
-```sql
--- CloudWatch Insights → /golfsync-prod/api
-fields @timestamp, @message
-| filter @message like /checkout.session.completed/ and @message like /user@example.com/
-| sort @timestamp desc
-```
-
-If the webhook was received, you'll see:
-```
-checkout.session.completed: provisioned MONTHLY for user@example.com (expires ...)
-```
-
-If no log entry exists, the webhook was never received. Check the Stripe dashboard:
-- Stripe Dashboard → Developers → Webhooks → Endpoint `https://golfsync.com/api/stripe/webhook`
-- Look for failed delivery attempts and re-send manually from there
-
-**3. Manually activate membership:**
-If Stripe webhook failed and the user has a confirmed payment, fix directly in the DB:
-```sql
-UPDATE users
-SET membership_tier = 'MONTHLY',
-    membership_expires_at = DATE_ADD(NOW(), INTERVAL 1 MONTH)
-WHERE email = 'user@example.com';
--- Use INTERVAL 1 YEAR for ANNUAL plans
-```
-
-**4. Extend trial manually:**
-```sql
-UPDATE users
-SET trial_expires_at = '2026-05-31 23:59:59'
-WHERE email = 'user@example.com';
-```
+1. **Admin Dashboard → Users tab** → find the user → check `membershipTier`, `trialExpiresAt`, `membershipExpiresAt`
+2. If **paid but no access**: Stripe Dashboard → Customers → search by email → verify subscription is active
+3. If **Stripe webhook failed**: Stripe Dashboard → Developers → Webhooks → check for failed deliveries → re-send manually
+4. To **extend trial manually** (DB access required):
+   ```sql
+   UPDATE users SET trial_expires_at = '2026-06-30 23:59:59' WHERE email = 'user@example.com';
+   ```
+5. To **manually activate membership** (DB access required):
+   ```sql
+   UPDATE users SET membership_tier = 'MONTHLY', membership_expires_at = DATE_ADD(NOW(), INTERVAL 1 MONTH) WHERE email = 'user@example.com';
+   ```
 
 ---
 
 ## 5. Issue: User Not Receiving Emails
 
-### Symptoms
-- User never got the welcome email
-- Password reset email not arriving
-- Marketing drip emails stopped
+### Types of emails sent
+
+| Email Type | Trigger | Affected by opt-out? |
+|---|---|---|
+| Welcome email | Registration | No |
+| Friend request / accepted | Friend actions | No |
+| Poll invite | Added to availability poll | No |
+| Round invite | Invited to a round | No |
+| Tournament reminder | Scheduled daily 8 AM | Yes |
+| Trial drip (Day 3, 7) | Scheduled daily 9 AM | Yes |
+| Dunning (Day 0, 3, 7) | Payment failure | No |
+| Renewal reminder | 7 days before renewal | No |
+| Account deletion | Self-deletion | No |
 
 ### Steps
 
-**1. Check email send logs:**
-```sql
--- CloudWatch Insights → /golfsync-prod/api
-fields @timestamp, @message
-| filter @message like /user@example.com/ and (@message like /email/ or @message like /mail/ or @message like /send/)
-| sort @timestamp desc
-```
-
-Successful send looks like:
-```
-Reminder email sent to user@example.com for tournament '...' (3d away)
-```
-
-Failure looks like:
-```
-Failed to send reminder email to user@example.com: <SMTP error message>
-```
-
-**2. Check for email marketing opt-out:**
-Admin dashboard → **Users** tab → find the user → check `emailMarketingOptOut` column. Or query the DB:
-```sql
-SELECT email, email_marketing_opt_out, drip_emails_sent_mask FROM users WHERE email = 'user@example.com';
-```
-If `email_marketing_opt_out = 1`, trial drip and marketing emails are silently skipped (by design — CAN-SPAM compliance). This is expected behavior. Transactional emails (payment confirmation, payment failed, subscription cancelled) are NOT affected by opt-out.
-
-**3. Check SES sending limits (prod):**
-- AWS Console → SES → Account dashboard → Sending statistics
-- If in sandbox mode, only verified addresses can receive emails
-- If daily sending quota is hit, emails queue and drop
-
-**4. Check SMTP credentials (dev — Gmail):**
-```bash
-aws secretsmanager get-secret-value \
-  --secret-id golfsync-dev/gmail-smtp-credentials \
-  --query SecretString --output text
-```
-Gmail app passwords expire or get revoked if 2FA settings change. Regenerate at: Google Account → Security → App passwords.
-
-**5. Check drip email bitmask:**
-The drip sequence uses a bitmask (`dripEmailsSentMask`) to track which emails were sent. If a bit is set, that email will never send again even if timing conditions are met.
-
-| Bit | Email | Day |
-|---|---|---|
-| 0x01 | Welcome + feature tour | Day 0 |
-| 0x02 | Friend nudge | Day 3 |
-| 0x04 | Round nudge | Day 7 |
-| 0x08 | Trial ending soon | Day 21 |
-| 0x10 | Last-chance personalized | Day 27 |
+1. **Admin Dashboard → Users tab** → find user → check `emailMarketingOptOut`. If opted out, marketing/drip emails are silently skipped (CAN-SPAM compliance).
+2. **Check CloudWatch for send failures**:
+   ```sql
+   fields @timestamp, @message
+   | filter @message like /Failed to send/ or @message like /MailException/
+   | sort @timestamp desc
+   ```
+3. **Check SES**: AWS Console → SES → Account dashboard → Sending statistics. If daily quota is hit, emails drop.
 
 ---
 
 ## 6. Issue: Payment / Billing Problems
 
-### Symptoms
-- User charged but no membership granted
-- User cancelled but still being charged
-- "Stripe is not configured" error
-
 ### Steps
 
-**1. Check Stripe webhook delivery:**
-Stripe Dashboard → Developers → Webhooks → `https://golfsync.com/api/stripe/webhook`
-
-Events to look for:
-- `checkout.session.completed` — subscription provisioned
-- `invoice.paid` — renewal extended
-- `invoice.payment_failed` — payment failed (email sent, access NOT revoked — Stripe retries)
-- `customer.subscription.deleted` — access revoked, cancellation email sent
-
-**2. Search for webhook processing in logs:**
-```sql
-fields @timestamp, @message
-| filter @message like /\[evt_/ or @message like /invoice.paid/ or @message like /subscription.deleted/
-| sort @timestamp desc
-```
-
-Each webhook is logged with its Stripe event ID (`[evt_...]`) for traceability.
-
-**3. "Stripe is not configured" error:**
-This means `stripe.secret-key` is blank. Check:
-```bash
-aws secretsmanager get-secret-value \
-  --secret-id golfsync-prod/stripe-secret-key \
-  --query SecretString --output text
-```
-If it still shows `REPLACE_WITH_STRIPE_SECRET_KEY`, the key was never populated. Follow the billing activation checklist in `AWS_DeploymentGuide.md`.
-
-**4. User's subscription cancelled but tier not downgraded:**
-Check logs for `customer.subscription.deleted` with the user's Stripe customer ID. If missing, look up the Stripe customer ID from the user record and search logs by that ID.
+1. **Stripe Dashboard → Customers** → search by user email → check subscription status and payment history
+2. **Stripe Dashboard → Developers → Webhooks** → check delivery status for the relevant event
+3. **Re-send failed webhooks** from the Stripe Dashboard directly
+4. Key events to look for:
+   - `checkout.session.completed` — subscription provisioned
+   - `invoice.paid` — renewal extended
+   - `invoice.payment_failed` — payment failed (dunning emails sent)
+   - `customer.subscription.deleted` — access revoked
 
 ---
 
 ## 7. Issue: API Returning 5xx Errors
 
-### Steps
+### Steps (all via AWS Console)
 
-**1. Check ECS service health:**
-```bash
-aws ecs describe-services \
-  --cluster golfsync-prod \
-  --services ApiService \
-  --query 'services[0].{running:runningCount,desired:desiredCount,deployments:deployments}'
-```
-
-**2. Check ALB health check:**
-- AWS Console → EC2 → Target Groups → `golfsync-prod-ApiTg`
-- Look for targets with status **unhealthy**
-- Health check path: `GET /api/courses` → must return 200
-
-**3. Check for OOM / container crash:**
-```bash
-aws ecs describe-tasks \
-  --cluster golfsync-prod \
-  --tasks $(aws ecs list-tasks --cluster golfsync-prod --service-name ApiService --query 'taskArns' --output text)
-```
-Look for `stopCode: EssentialContainerExited` or `OutOfMemoryError` in the logs.
-
-**4. Search logs for exceptions:**
-```sql
-fields @timestamp, @message
-| filter @message like /Exception/ or @message like /INTERNAL_ERROR/
-| sort @timestamp desc
-| limit 50
-```
-
-**5. Check RDS connectivity:**
-```sql
-fields @timestamp, @message
-| filter @message like /Unable to acquire JDBC/ or @message like /Communications link failure/
-| sort @timestamp desc
-```
-If RDS connection errors appear, check:
-- RDS instance status: AWS Console → RDS → `golfsync-prod-GolfSyncDb`
-- Security group: `RdsSg` must allow port 3306 from `ApiSg`
+1. **CloudWatch Dashboard → `golfsync-prod`** — check CPU, memory, error rate, task count
+2. **EC2 → Target Groups** → find API target group → check for unhealthy targets
+3. **ECS → Clusters → `golfsync-prod`** → check running vs desired task count
+4. **CloudWatch → `/golfsync-prod/api`** → search for exceptions
+5. **RDS** → check instance status, CPU, connections, free storage
 
 ---
 
-## 8. Issue: Rate Limit Complaints (User Getting 429)
+## 8. Rate Limiting & WAF
 
-### Rate limits in place
+### Rate limits
 
-| Endpoint group | Limit | Scope |
+| Endpoint | Limit | Scope |
 |---|---|---|
-| Auth (`/api/auth/**`) | 10 req/min | Per IP |
-| AI assistant (`/api/ai/**`) | 5 req/min | Per user |
-| Search (`/api/courses/search`, `/api/tournaments/search`) | 30 req/min | Per IP |
-| Tee times (`/api/tee-times/**`) | 10 req/min | Per IP |
+| Auth (login, register) | 10/min | Per IP |
+| Change password | 5/min | Per user |
+| AI assistant | 5/min | Per user |
+| Messages | 10/min | Per user |
+| User search | 30/min | Per IP |
+| Tournaments | 30/min | Per IP |
+| All other mutations (POST/PUT/PATCH/DELETE) | 10/min | Per user |
 
-### Steps
+### WAF Geo-Restriction
 
-**1. Confirm it's a rate limit:**
-HTTP 429 response with body `{ "error": "Too Many Requests" }`.
-
-**2. Check logs:**
-```sql
-fields @timestamp, @message
-| filter @message like /429/ or @message like /rate limit/ or @message like /Too Many Requests/
-| sort @timestamp desc
-```
-
-**3. Legitimate user hitting AI limit:**
-The 5/min AI cap is intentional (cost control). If a specific user needs a higher limit for a valid reason, the rate limit configuration is in `application.properties` (`golfsync.rate-limit.*`). Changes require redeployment.
-
-**4. Suspicious traffic (bot / scraper):**
-If a single IP is hammering endpoints, escalate to WAF configuration or block at the ALB security group level.
+Prod has an AWS WAF that blocks all traffic from outside the United States. If a user reports they can't access the site while traveling internationally, they need a US VPN. Check WAF metrics in CloudWatch → `golfsync-prod-waf`.
 
 ---
 
-## 9. ECS Exec — Shell Access to Live Container
+## 9. Content Moderation
 
-Use when you need to inspect the running container directly (check env vars, test DB connectivity, read logs inline).
+Messages are moderated by three layers:
 
-```bash
-# Get the running task ID
-TASK_ID=$(aws ecs list-tasks \
-  --cluster golfsync-prod \
-  --service-name ApiService \
-  --query 'taskArns[0]' --output text | awk -F/ '{print $NF}')
+1. **URL pattern filter** — blocks phishing, adult, malware link patterns
+2. **OpenAI Moderation API** — detects hate, violence, sexual content (free)
+3. **Keyword blocklist fallback** — catches worst content if OpenAI is unavailable
 
-# Open a shell
-aws ecs execute-command \
-  --cluster golfsync-prod \
-  --task $TASK_ID \
-  --interactive \
-  --command "/bin/sh"
-```
-
-Inside the container you can:
-```bash
-# Test DB connectivity
-curl -sf http://localhost:8080/api/courses && echo "API healthy"
-
-# Check env vars (redacted in real output)
-env | grep STRIPE
-env | grep SPRING_MAIL
-
-# Check Java heap
-ps aux | grep java
-```
-
-**Dev cluster:** replace `golfsync-prod` with `golfsync-dev` and `ApiService` with the dev service name.
+Blocked messages return HTTP 400 to the sender. Users see: "Your message was flagged for inappropriate content." The messages page shows a safety notice banner.
 
 ---
 
 ## 10. Admin Dashboard — What's Where
 
-The admin panel at `https://golfsync.com/admin` is accessible by two roles:
+Access at `https://golfsync.io/admin`
 
-| Role | Access level |
+| Role | Access |
 |---|---|
-| **ADMIN** | Full panel — all tabs, all actions |
-| **TOURNAMENT_SUPPORT** | Tournament-only view — Featured and Reports tabs; no access to Users, Rounds, Promos, Analytics, or other admin sections |
+| **ADMIN** | Full panel — all tabs |
+| **TOURNAMENT_SUPPORT** | Tournaments + Reports tabs only. Sees "Tournaments" link in dashboard nav. |
 
-Use the tabs across the top to navigate.
+### Tabs
 
-| Tab | Who can access | What you can do |
+| Tab | Who | What you can do |
 |---|---|---|
-| **Analytics** | ADMIN | Signups/day, trial→paid conversions, active trials, churn rate, round creation rate |
-| **Users** | ADMIN | Full user list — membership state, ban status, role, opt-out; delete a user; assign roles |
-| **Rounds** | ADMIN | All rounds across all users; update status (PENDING/BOOKED/COMPLETED/CANCELLED); delete |
-| **User Reports** | ADMIN | Reports submitted by users about other users; accept (ban) or deny with reason |
-| **Promo Codes** | ADMIN | Create new promo codes (FREE / % discount / flat discount); deactivate existing ones |
-| **Featured** | ADMIN + TOURNAMENT_SUPPORT | Promote courses and tournaments; manage curated tournament data (name, date, location, registration link, format, entry fee); review and moderate tournament reports |
-| **Reports** | ADMIN + TOURNAMENT_SUPPORT | Tournament reports submitted by users — approve or deny |
+| **Analytics** | ADMIN | Signups/day, conversions, churn, attribution, cancellation reasons |
+| **Users** | ADMIN | User list, ban/unban, role assignment, delete, impersonate |
+| **Rounds** | ADMIN | All rounds, update status |
+| **User Reports** | ADMIN | Reports about users — approve (ban) or deny |
+| **Promo Codes** | ADMIN | Create/deactivate promo codes |
+| **Tournaments** | ADMIN + TS | State visibility toggle, curated tournaments, Serper refresh, featured tournaments, tournament reports |
+| **Courses** | ADMIN | Featured courses management |
+| **Feedback** | ADMIN | View user feedback |
+| **Polls** | ADMIN | Create/manage site-wide polls |
+
+### Tournament Management
+
+**State Visibility** — toggle which states users can see. Green = visible, red = hidden.
+
+**Curated Tournaments:**
+- **State selector + Refresh from Google** — pick a state and refresh to discover new tournaments
+- **Show/Hide Removed** — toggle to see deactivated tournaments
+- **Edit** any row — sets `adminLocked=true` so Serper never overwrites your edits
+- **Remove** — soft-deletes (hides from users)
+
+**Key:** The weekly Serper refresh (Mondays 3 AM UTC) skips any row with `adminLocked=true`.
 
 ### Roles
 
-GolfSync has three user roles:
-
 | Role | Description |
 |---|---|
-| `USER` | Standard end user — default for all registrations |
-| `TOURNAMENT_SUPPORT` | Can manage all tournament data (featured/curated tournaments, registration links, tournament reports) via the admin panel; no other admin access |
-| `ADMIN` | Full admin access — all panel tabs, user management, impersonation, role assignment |
+| `USER` | Standard user — default for all registrations |
+| `TOURNAMENT_SUPPORT` | Tournament management only via admin panel |
+| `ADMIN` | Full admin access |
 
-### Assigning / changing a user's role
-
-**Via the admin dashboard (recommended):**
-Admin dashboard → **Users** tab → find the user → click the role dropdown in the Role column → select the new role. The change is applied immediately.
-
-**Via DB (emergency fallback only):**
-```sql
-UPDATE users SET role = 'ADMIN' WHERE email = 'admin@golfsync.com';
--- Valid values: USER, TOURNAMENT_SUPPORT, ADMIN
-```
-
-### TOURNAMENT_SUPPORT — what they can do
-
-A user with the `TOURNAMENT_SUPPORT` role logs in to `https://golfsync.com/admin` and sees a restricted "Tournament Management" view with only the **Featured** and **Reports** tabs.
-
-From there they can:
-- Add and edit **Featured Tournaments** (name, date, location, lat/lng, format, entry fee, registration URL)
-- Add, edit, and deactivate **Curated Tournaments** (all fields including registration URL — the URL that appears when a user clicks "Register" on a tournament)
-- Trigger a **Serper data refresh** to re-pull external tournament data
-- Review and decide on **Tournament Reports** submitted by users
-
-**Key behavior:** Any change made by ADMIN or TOURNAMENT_SUPPORT sets `adminLocked = true` on curated tournament rows. This prevents the weekly Serper auto-refresh job from overwriting manually entered data (including registration links).
-
-### Banning / unbanning a user
-
-Admin dashboard → **Users** tab → find the user → click **Ban** or **Unban**.
-
-Banned users receive HTTP 403 `"This account has been suspended."` on their next login attempt.
-
-### Impersonating a user (for debugging)
-
-Admin dashboard → **Users** tab → click **Impersonate** on any user row. This sets your session to that user's account so you can reproduce the issue they're experiencing. All impersonation events are logged in CloudWatch:
-```sql
--- CloudWatch Insights → /golfsync-prod/api
-fields @timestamp, @message
-| filter @message like /AUDIT impersonate/
-| sort @timestamp desc
-```
+Change roles: Admin Dashboard → Users tab → role dropdown → select new role (immediate).
 
 ---
 
-## 11. Database — Direct Access
+## 11. Deployment
 
-Use only for read-only investigation. Never write directly to production without a Liquibase migration.
+### Prod deploy checklist
+
+1. Ensure all repos on `main`
+2. Run Cypress: `gh workflow run cypress.yml --repo sports4him12/golfsync-web -f branch=release`
+3. Wait for Cypress to pass
+4. Run: `./scripts/deploy.sh prod`
+
+### Deploy script flags
 
 ```bash
-# Get RDS endpoint
-aws rds describe-db-instances \
-  --db-instance-identifier golfsync-prod-GolfSyncDb \
-  --query 'DBInstances[0].Endpoint.Address' --output text
-
-# Get credentials from Secrets Manager
-aws secretsmanager get-secret-value \
-  --secret-id golfsync-prod/db-credentials \
-  --query SecretString --output text | python3 -m json.tool
+./scripts/deploy.sh prod                    # full deploy with all gates
+./scripts/deploy.sh prod --skip-cypress     # bypass Cypress gate
+./scripts/deploy.sh prod --skip-ci-check    # bypass CI gate
+./scripts/deploy.sh prod --skip-liquibase   # skip DB migrations
+./scripts/deploy.sh prod --yes              # skip confirmation prompts
 ```
 
-Key tables for user issue investigation:
+### Dev environment
 
-| Table | Purpose |
-|---|---|
-| `users` | Account state — role, trial, membership, Stripe IDs, ban status, opt-out |
-| `user_events` | Funnel events — trial_started, first_round_created, trial_converted, etc. |
-| `rounds` / `round_players` | Round and invite state |
-| `friend_requests` | Pending/accepted friend relationships |
-| `messages` | Group chat messages per round |
-| `availability_polls` | Availability poll data |
-| `subscriptions` | (Stripe subscription state mirrored on `users` table) |
-
-```sql
--- Full user state
-SELECT id, email, username, role, banned,
-       trial_expires_at, membership_tier, membership_expires_at,
-       stripe_customer_id, stripe_subscription_id,
-       email_marketing_opt_out, drip_emails_sent_mask, created_at
-FROM users WHERE email = 'user@example.com';
-
--- Funnel events for a user
-SELECT event_type, created_at FROM user_events
-WHERE user_id = <id> ORDER BY created_at;
-
--- Rounds a user is part of
-SELECT r.id, r.course_name, r.status, rp.status as player_status
-FROM rounds r
-JOIN round_players rp ON rp.round_id = r.id
-JOIN users u ON u.id = rp.user_id
-WHERE u.email = 'user@example.com'
-ORDER BY r.created_at DESC;
-```
+Dev scales to 0 when not in use. Scale up/deploy/scale down via ECS Console or the deploy script.
 
 ---
 
 ## 12. Liquibase Migration Failures
 
-If the API fails to start and CloudWatch shows migration errors:
-
-**1. Check migration logs:**
-CloudWatch → `/golfsync-prod/liquibase` → most recent stream
-
-Look for:
-```
-Caused by: liquibase.exception.LockException: Could not acquire change log lock
-```
-This means a previous migration run didn't release the lock. Fix:
-```sql
-DELETE FROM DATABASECHANGELOGLOCK WHERE ID = 1;
-```
-
-**2. Re-run the Liquibase task:**
-The Liquibase run command is output by CDK as `LiquibaseMigrateCommand` after every deploy. Re-run it:
-```bash
-aws ecs run-task \
-  --cluster golfsync-prod \
-  --task-definition golfsync-prod-LiquibaseTaskDef:<revision> \
-  --network-configuration "awsvpcConfiguration={subnets=[<subnet-id>],securityGroups=[<sg-id>]}"
-```
+1. **Check logs:** CloudWatch → `/golfsync-prod/liquibase` → most recent stream
+2. **Lock stuck?** `DELETE FROM DATABASECHANGELOGLOCK WHERE ID = 1;`
+3. **Re-run:** Use the `LiquibaseMigrateCommand` from CloudFormation Console → Stack outputs
 
 ---
 
-## 13. Escalation Checklist
+## 13. Production Rollback
 
-When a user contacts support:
+### Fast rollback (~2 min, via AWS Console)
 
-1. Get their **email address** and the **approximate time** the issue occurred
-2. Admin dashboard → **Users** tab — find the user, check membership state, ban status, opt-out
-3. Admin dashboard → **Analytics** tab — check overall health (not user-specific, but useful for outage context)
-4. CloudWatch Insights → `/golfsync-prod/api` — search by their email in the incident time window
-5. Stripe Dashboard → Customers — if payment-related, look up by `stripe_customer_id` from the DB
-6. AWS Console → SES → Sending statistics — if email delivery is suspect
-7. For data fixes, use ECS Exec + MySQL (§9 + §11) — **never write directly to prod DB without first understanding the cause**
+1. ECS → Clusters → `golfsync-prod` → API service → Update
+2. Change task definition revision to N-1 → Force new deployment
+3. Repeat for Web service
+4. Wait for stabilization
+
+### Full rollback (via git tags)
+
+```bash
+git tag -l 'prod-*' | sort -r | head -20
+git checkout prod-2026-04-16-1840
+git submodule update --init --recursive
+./scripts/deploy.sh prod --skip-cypress
+```
+
+**DB caveat:** Liquibase migrations are not auto-reversible. Additive changes are safe; destructive changes need a manual rollback script.
+
+---
+
+## 14. Escalation Checklist
+
+1. Get user's **email** and **approximate time** of issue
+2. **Admin Dashboard → Users tab** — check membership, ban, role
+3. **CloudWatch → `/golfsync-prod/api`** — search by userId
+4. **Stripe Dashboard** — if payment-related
+5. **SES Console** — if email delivery suspect
+6. **CloudWatch Dashboard → `golfsync-prod`** — system health
 
 **Support email:** `support@golfsync.io`
 
 ---
 
-## 14. Production Rollback
+## 15. Key Infrastructure
 
-Every successful `./scripts/deploy.sh prod` run automatically creates a git tag
-(`prod-YYYY-MM-DD-HHmm`) on the parent monorepo and all submodules.
-Two rollback paths are available depending on the situation.
-
----
-
-### Scenario A — Fast rollback: revert app code without rebuilding (~2 min)
-
-ECS keeps every task definition revision forever. This swaps the running containers
-back to the previous image with no Docker rebuild. Use this when the DB schema is
-unchanged or the new migration is safely additive (the old app can run against it).
-
-```bash
-# 1. Find the current revision number for each service
-aws ecs describe-task-definition \
-  --task-definition golfsync-prod-ApiTaskDef \
-  --profile golfsync-prod \
-  --query 'taskDefinition.revision'
-
-aws ecs describe-task-definition \
-  --task-definition golfsync-prod-WebTaskDef \
-  --profile golfsync-prod \
-  --query 'taskDefinition.revision'
-
-# 2. Roll back to revision N-1 (replace <N-1> with the previous number)
-aws ecs update-service \
-  --cluster golfsync-prod \
-  --service ApiService \
-  --task-definition golfsync-prod-ApiTaskDef:<N-1> \
-  --force-new-deployment \
-  --profile golfsync-prod
-
-aws ecs update-service \
-  --cluster golfsync-prod \
-  --service WebService \
-  --task-definition golfsync-prod-WebTaskDef:<N-1> \
-  --force-new-deployment \
-  --profile golfsync-prod
-
-# 3. Wait for services to stabilize
-aws ecs wait services-stable \
-  --cluster golfsync-prod \
-  --services ApiService WebService \
-  --profile golfsync-prod
-```
-
----
-
-### Scenario B — Full rollback: restore a prior tagged release and redeploy
-
-Use this when you need to roll back further than one revision, or when a CDK
-infrastructure change (not just app code) needs to be reverted.
-
-```bash
-# 1. List available prod release tags (most recent first)
-git tag -l 'prod-*' | sort -r | head -20
-
-# 2. Check out the target release in the parent repo and all submodules
-git checkout prod-2026-04-11-1430
-git submodule update --init --recursive
-
-# 3. Verify the submodule SHAs look correct
-git submodule status
-
-# 4. Redeploy — the script rebuilds Docker images from the checked-out source
-./scripts/deploy.sh prod
-
-# 5. After the rollback is confirmed good, return to latest main
-git checkout main
-git submodule update --init --recursive
-```
-
----
-
-### DB migration caveat
-
-Liquibase migrations are **not automatically reversible**. Rolling back the app does
-not roll back the DB schema. Additive changes (new columns with defaults, new tables)
-are safe — the old app can run against the new schema. Destructive changes (column
-drops, renames) require a manually written rollback script. Write that script before
-merging any destructive migration.
+| Resource | Where |
+|---|---|
+| ALB | EC2 → Load Balancers |
+| ECS Cluster | ECS → `golfsync-prod` |
+| RDS | RDS → `golfsync-prod` instance |
+| WAF | WAF → `GeoRestrictWaf` (US-only) |
+| Route53 Health Check | Route53 → Health Checks |
+| SES | SES → `golfsync.io` domain |
+| Secrets Manager | Secrets Manager → `golfsync-prod/*` |
+| CloudWatch Dashboard | CloudWatch → Dashboards → `golfsync-prod` |
