@@ -282,7 +282,7 @@ Access at `https://golfsync.io/admin`
 - **Edit** any row — sets `adminLocked=true` so Serper never overwrites your edits
 - **Remove** — soft-deletes (hides from users)
 
-**Key:** The weekly Serper refresh (Mondays 3 AM UTC) skips any row with `adminLocked=true`.
+**Key:** Serper refresh is manual (triggered from the admin panel via "Refresh from Google"). It skips any row with `adminLocked=true`.
 
 ### Roles
 
