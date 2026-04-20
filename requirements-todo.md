@@ -12,8 +12,6 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **GolfNow cancellation handling** — Implement round cancellation according to GolfNow API requirements. Research GolfNow's cancellation policies (window, fees, confirmation flow) and mirror that logic in the `cancelRound` flow. Update the BPMN process and UI accordingly so users understand what happens when a booked tee time is cancelled.
 
-- [x] **3-step onboarding flow** — After registration, guide new users through: (1) find/set home course, (2) invite a friend, (3) create first round. Currently users land on the dashboard with no guidance. This is the highest-leverage activation improvement available.
-
 - [ ] **Tournament Discovery — live feature** — Tournament Discovery is currently hidden ("Coming this Summer" teaser on landing page). When ready to launch: set `TOURNAMENTS_ENABLED=true`, restore the feature card on the landing page, and ensure the tournament database has national coverage beyond the current east-coast seed data.
 
 - [ ] **Refer a Friend — live feature** — Referral program is currently hidden ("Coming this Summer" teaser on landing page). The backend (referral codes, credit logic) is implemented. When ready: restore the dashboard widget, add referral code to account settings, and wire the landing page CTA.
@@ -36,10 +34,6 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **PWA / home screen install** — `manifest.json` + service worker so users can install GolfSync on their phone home screen.
 
-- [x] **Full dunning email sequence** — Currently only the initial payment-failed email is sent. Add day-3 and day-7 follow-up emails before membership is downgraded. Also add a renewal reminder email 7 days before subscription expiry.
-
-- [x] **How-to guide and FAQ updates for legal/compliance pages** — Update `app/how-to/account/page.tsx` and the FAQ in `app/support/page.tsx` to reflect: (a) the 5/31 launch trial period, (b) the email opt-out toggle in account settings, (c) the Terms / Privacy / Cookie pages.
-
 ---
 
 ## Security & Infrastructure
@@ -47,12 +41,6 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 <!-- Auth, secrets, AWS, hardening, compliance -->
 
 - [ ] **MFA for sensitive operations** — Add multi-factor authentication challenges before high-risk actions: Stripe billing management, account deletion, and admin-panel access. Evaluate TOTP (Google Authenticator / Authy) vs. email OTP. Backend needs an `mfa_secret` column, a verify-code endpoint, and a step-up token pattern. Frontend needs a modal challenge before the sensitive action proceeds.
-
-- [x] **Support email — permanent address** — `support@golfsync.io` is now set across `application.properties`, `EmailService.java`, all web pages (terms, privacy, account, support), and CDK config (`bin/golfsync-cdk.ts`).
-
-- [ ] **CDK TODOs — Route53 hosted zone and ACM certificate** — `golfsync-cdk.ts` has two outstanding values in the prod stack that must be populated before prod HTTPS works: (1) `GOLFSYNC_HOSTED_ZONE_ID` — find via `aws route53 list-hosted-zones`; (2) `GOLFSYNC_CERT_ARN` — request via ACM in us-east-1. Document the values in `AWS_DeploymentGuide.md` once confirmed.
-
-- [ ] **CDK alarm email env vars** — `GOLFSYNC_DEV_ALARM_EMAIL` and `GOLFSYNC_PROD_ALARM_EMAIL` must be set before deploying either stack. Add to `.env.prod.example` with instructions.
 
 - [ ] **GolfNow API partnership or pivot** — GolfNow integration is currently mocked (`GolfNowClientMock`). Exit interstitial and non-affiliation disclaimers are in place. Decision needed: (a) negotiate GolfNow/Supreme Golf/TeeOff API partnership, or (b) reposition as "round management" platform and remove tee-time booking. Blocking real marketing.
 
@@ -92,6 +80,12 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 | Date | Item |
 |------|------|
+| 2026-04-19 | Mobile parity sprint — round attestation, email-invite friends, dues/payment tracking, round editing, round→messages + invite-token deep-links, forced change-password flow, universal-link manifest (iOS associatedDomains + Android App Links + AASA/assetlinks route handlers on web), workflow tasks display, suggestion prefs (distance + handicap), referral share, dashboard pending-action banners, "already booked" checkbox, round max-players off-by-one bug fix |
+| 2026-04-19 | Error-handling + observability — GlobalExceptionHandler logs full stack on 500s; `[EMAIL_FAIL]` / `[SERPER_FAIL]` / `[OPENAI_FAIL]` / `[PAYMENT_FAIL]` / `[PAYMENT_CARD]` log tags across services; Stripe CardException surfaces user-facing decline reason; global Toast provider + `formatApiError` on web; 27 `alert()` calls replaced with toasts; SessionWarning now shows loading + real error + fallback redirect |
+| 2026-04-19 | Landing + dashboard polish — removed duplicate "Try It Free" from header; Pro Shop tiles reordered (Chat → Rounds → Partners); Partner Leaderboard restyled to match the navy-header card pattern; dashboard missions empty-state card removed; poll-create no longer auto-selects all friends; tutorial videos updated (Round Scheduling + Playing Partners); poll detail adds "Your vote" label + shows real names alongside @handles |
+| 2026-04-19 | Admin signup notification email — API sends a notice to `ADMIN_SIGNUP_NOTIFICATION_EMAIL` (prod: ryanrpick@golfsync.io) whenever a new account is created; wired via CDK env var, no-op when unset in dev/beta |
+| 2026-04-19 | CDK Route53 hosted zone + ACM certificate ARNs hardcoded in `golfsync-cdk/bin/golfsync-cdk.ts`; prod HTTPS works; no longer require shell env vars |
+| 2026-04-19 | Support email — permanent address — `support@golfsync.io` is now set across `application.properties`, `EmailService.java`, all web pages (terms, privacy, account, support), and CDK config (`bin/golfsync-cdk.ts`) |
 | 2026-04-14 | TOURNAMENT_SUPPORT role — new Role enum value; `TournamentAdminController` gives TOURNAMENT_SUPPORT access to all featured/curated tournament and tournament report admin endpoints; ADMIN retains full access; `SecurityConfig` updated with tournament path matchers before the ADMIN catch-all; admin panel shows "Tournament Management" view for TOURNAMENT_SUPPORT with only Featured/Reports tabs; ADMIN can assign roles via a dropdown in the Users tab (`PUT /api/admin/users/{id}/role`); manual curated-tournament writes set `adminLocked=true` preventing Serper refresh overwrites; 20+ new unit tests (TournamentAdminControllerTest) + Cypress E2E tests for role-gating and role assignment; admin-runbook.md updated with role matrix and TOURNAMENT_SUPPORT documentation |
 | 2026-04-12 | Welcome email on registration — `EmailService.sendWelcomeEmail()` fires immediately on signup with onboarding steps and no trial/membership language; replaces the deferred Day 0 drip email that was paused |
 | 2026-04-12 | Trial drip Day 0/21/27 paused — welcome, ending-soon, and last-chance emails commented out in `TrialDripService` until membership enforcement date is finalized; Day 3 and Day 7 nudges remain active |

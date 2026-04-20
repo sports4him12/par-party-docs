@@ -199,28 +199,30 @@ Migration `024` runs automatically in dev (seeded via `SPRING_LIQUIBASE_CONTEXTS
 
 ---
 
-## Prod Stack (`GolfSyncProdStack`) — Deploy in progress
+## Prod Stack (`GolfSyncProdStack`) — Deployed
 
-### Step 1 — Create a Route53 hosted zone ✅ Done
+### Step 1 — Route53 hosted zone ✅
 
-Hosted zone ID: `Z07602281XXQ30UW6PUD4` (hardcoded in `golfsync-cdk/bin/golfsync-cdk.ts`)
+Hosted zone ID: `Z0171145TFPVNPO0FH1Z` (hardcoded in `golfsync-cdk/bin/golfsync-cdk.ts`)
 
-### Step 2 — Request an ACM certificate ✅ Done
+### Step 2 — ACM certificate ✅
 
-Certificate ARN: `arn:aws:acm:us-east-1:805865757850:certificate/61583a35-628b-43f1-8323-163bf36252fa`
+Certificate ARN: `arn:aws:acm:us-east-1:805865757850:certificate/7710d209-daf1-4b9a-bcca-591d5cf2a005`
 (hardcoded in `golfsync-cdk/bin/golfsync-cdk.ts` — no env var needed at deploy time)
 
-### Step 3 — Deploy ⏳ In progress
+### Step 3 — Deploy ✅
 
-No env vars needed — hosted zone ID and cert ARN are hardcoded in CDK config.
+Regular prod deploys go through the standard wrapper — all branches required on `main`,
+Liquibase runs post-deploy, ECS stabilisation is watched, and the script tags the release
+`prod-YYYY-MM-DD-HHmm` on every submodule.
 
 ```bash
-scripts/deploy.sh prod --skip-liquibase
+./scripts/deploy.sh prod
 ```
 
-> **First prod deploy:** Use `--skip-liquibase` because the stack doesn't exist yet and the
-> Liquibase task ARN can't be read from outputs until after the stack is created. Run Liquibase
-> manually (Step 4) after the stack finishes.
+> **First-deploy-only:** The original bootstrap used `--skip-liquibase` because the stack
+> didn't exist yet and the Liquibase task ARN wasn't readable from outputs. That situation
+> has passed — normal prod deploys do NOT need the flag.
 
 This creates:
 - Route53 A alias records: `golfsync.com` and `www.golfsync.com` → ALB

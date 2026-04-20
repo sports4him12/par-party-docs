@@ -19,7 +19,7 @@
 | **Operations readiness** | ★★★★☆ | ~$150–190/month compute savings shipped; CI/CD still manual |
 | **MVP scope fit** | ★★★★☆ | Conversion funnel built; launch trial period (5/31) is a deliberate business decision |
 
-**Bottom line:** The platform is functionally complete for an invite-based soft launch. The deliberate 5/31 free trial decision de-risks early user acquisition — everyone gets full access with no payment friction through May 31, 2026. The most critical remaining gap is still a real tee-time data source and the 3-step onboarding flow. Legal compliance (Terms, Privacy, Cookie consent, email opt-out, GolfNow disclaimer) has been addressed. Referral and Tournament features are built but held behind "Coming this Summer" teasers pending polish and national data coverage.
+**Bottom line:** The platform is functionally complete for an invite-based soft launch. The deliberate 5/31 free trial decision de-risks early user acquisition — everyone gets full access with no payment friction through May 31, 2026. The most critical remaining gap is a real tee-time data source (GolfNow integration or pivot). Legal compliance (Terms, Privacy, Cookie consent, email opt-out, GolfNow disclaimer) has been addressed. Onboarding is live on web and mobile. Referral and Tournament features are built but held behind "Coming this Summer" teasers pending polish and national data coverage.
 
 ---
 
@@ -45,19 +45,16 @@
 |---|---|---|
 | 1 | **Activate billing** — confirm Stripe live keys in Secrets Manager, set `STRIPE_ENABLED=true` in prod, register webhook endpoint in Stripe dashboard, send pre-billing email to all users | CFO/CTO |
 | 2 | **Decide GolfNow integration or reposition** — negotiate GolfNow/Supreme Golf/TeeOff API, or rebrand as "round management" | COO |
-| 3 | **3-step onboarding flow** — find home course → invite a friend → create first round | CMO |
-| 4 | ~~**Update support email**~~ — `support@golfsync.io` is set across all touchpoints | ✅ Done |
 
 ### Near-Term (post-June 1)
 
 | # | Action | Owner |
 |---|---|---|
-| 5 | **Launch Tournament Discovery** — restore feature when national data pipeline is ready | COO/CMO |
-| 6 | **Launch Refer a Friend** — restore dashboard widget and landing page CTA | CMO |
-| 7 | **Course leaderboard** — top scores per course | CMO |
-| 8 | **Shareable scorecard** — PNG export for Instagram/X | CMO |
-| 9 | **Full dunning sequence** — day 3 + day 7 follow-ups after failed payment; renewal reminder 7 days before expiry | CFO |
-| 10 | **Seasonal pricing evaluation** — $29.99/6 months, per-event $4.99, family/group plan | CFO |
+| 3 | **Launch Tournament Discovery** — restore feature when national data pipeline is ready | COO/CMO |
+| 4 | **Launch Refer a Friend** — restore dashboard widget and landing page CTA | CMO |
+| 5 | **Course leaderboard** — top scores per course | CMO |
+| 6 | **Shareable scorecard** — PNG export for Instagram/X | CMO |
+| 7 | **Seasonal pricing evaluation** — $29.99/6 months, per-event $4.99, family/group plan | CFO |
 
 ### Medium-Term (90–180 days)
 
