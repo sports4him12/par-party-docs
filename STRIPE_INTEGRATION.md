@@ -13,7 +13,7 @@ This doc captures what's live, what's needed for Connect, and the gotchas.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Membership tiers (Organizer $4.99/mo, League Pro $14.99/mo) | **Live** | Checkout Sessions + customer portal + webhook. Monthly billing only. Trial through 2026-05-31; no upgrade enforcement until then. |
+| Membership tiers (Organizer $4.99/mo, League Pro $14.99/mo) | **Live in prod since 2026-04-28** | Checkout Sessions + customer portal + webhook. Monthly billing only. Live keys + price IDs deployed; webhook endpoint registered. Global trial window through 2026-06-30 + 30-day per-user trial at signup. |
 | Stripe Connect (Express accounts for users) | **Not built** | This doc's primary subject. |
 | Tournament entry-fee collection | **Manual today** | League owner uses Venmo + a screenshot. Once Connect lands, switch to Stripe-mediated. |
 | Side-pot / skins buy-ins | **Manual** | Same as above. |
@@ -42,10 +42,11 @@ STRIPE_LEAGUE_PRO_PRICE_ID=price_...
 2. API creates a Checkout Session with `success_url` + `cancel_url` pointing back to `/membership/success` and `/membership`.
 3. User pays on Stripe-hosted page.
 4. Stripe sends `checkout.session.completed` → our webhook flips the user's tier and persists `stripe_customer_id` + `stripe_subscription_id`.
-5. Recurring invoices fire `invoice.payment_succeeded` (no-op currently — tier already set) and `invoice.payment_failed` (downgrade after grace period — TODO, see "Open items" below).
+5. Recurring invoices fire `invoice.paid` (no-op currently — tier already set) and `invoice.payment_failed` (downgrade after grace period — TODO, see "Open items" below).
 
-**Webhook events we listen for**
+**Webhook events we listen for** (StripeWebhookController.java)
 - `checkout.session.completed` — initial activation
+- `invoice.paid` — recurring renewal logged; tier already set
 - `customer.subscription.updated` — tier change via portal
 - `customer.subscription.deleted` — cancellation
 - `invoice.payment_failed` — *currently logged only*; should downgrade to FREE after retries exhaust
