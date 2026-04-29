@@ -83,15 +83,18 @@ All users receive full access at no charge through May 31. Stripe subscription i
 
 ### Revenue Levers
 
+Current pricing (as of 2026-04-29): Organizer $4.99/mo, League Pro $14.99/mo, monthly billing only. No annual variants.
+
 | Lever | Status |
 |---|---|
-| Monthly/Annual subscriptions | 🔶 Infrastructure ready; billing paused until June 1 |
+| Organizer + League Pro subscriptions | 🔶 Infrastructure ready; billing paused until June 1 |
 | Tournament entry fee commission | ⬜ Open |
 | GolfNow referral/affiliate | ⬜ Blocked (integration still mocked) |
 | Premium tier | ⬜ Open |
 | B2B white-label | ⬜ Open |
 
 ### Pricing Alternatives Not Yet Evaluated
+These are exploratory ideas to evaluate **alongside** the active two-tier monthly plan, not replacements:
 - **Seasonal plan**: $29.99 for 6 months (April–September)
 - **Per-event pricing**: $4.99 to unlock for a single round
 - **Family/group plan**: one subscription, up to 4 golfers

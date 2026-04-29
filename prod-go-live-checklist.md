@@ -230,9 +230,9 @@ All of these are created by CDK with placeholder values. Replace them before tra
 ## 9. Stripe Billing Setup
 
 - [ ] Stripe account in live mode (not test mode)
-- [ ] Monthly price created in Stripe Dashboard: **$9.99/month recurring**
-- [ ] Annual price created in Stripe Dashboard: **$79.99/year recurring**
-- [ ] `STRIPE_MONTHLY_PRICE_ID` and `STRIPE_ANNUAL_PRICE_ID` set in prod ECS task environment
+- [ ] Organizer price created in Stripe Dashboard: **$4.99/month recurring**
+- [ ] League Pro price created in Stripe Dashboard: **$14.99/month recurring**
+- [ ] `STRIPE_ORGANIZER_PRICE_ID` and `STRIPE_LEAGUE_PRO_PRICE_ID` set in prod ECS task environment
 - [ ] Webhook endpoint registered in Stripe Dashboard:
   - URL: `https://golfsync.io/api/stripe/webhook`
   - Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`
@@ -286,7 +286,7 @@ Do not do this before June 1. Come back to this section on billing day.
 - [ ] Stripe live keys confirmed in Secrets Manager
 - [ ] Stripe webhook confirmed active
 - [ ] `STRIPE_ENABLED=true` in prod ECS task
-- [ ] `STRIPE_MONTHLY_PRICE_ID` and `STRIPE_ANNUAL_PRICE_ID` confirmed
+- [ ] `STRIPE_ORGANIZER_PRICE_ID` and `STRIPE_LEAGUE_PRO_PRICE_ID` confirmed
 - [ ] Redeploy API task to pick up new env vars
 - [ ] End-to-end subscription test with a real card (then cancel/refund)
 

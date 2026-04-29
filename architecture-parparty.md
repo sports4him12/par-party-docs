@@ -358,7 +358,7 @@ When a FREE promo code is applied, `create-intent` returns `{free: true, amountC
 ### Flow (Stripe active)
 
 ```
-User selects plan (MONTHLY $9.99 / ANNUAL $79.99)
+User selects tier (ORGANIZER $4.99/mo / LEAGUE_PRO $14.99/mo)
         │
 Optional: enter promo code → GET /api/payments/validate-promo
         │

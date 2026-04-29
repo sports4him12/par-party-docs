@@ -93,15 +93,16 @@
 
 ## 6. Revenue Streams
 
-**Membership Subscriptions (primary):**
+**Membership Subscriptions (primary):** monthly billing only.
 
-| Plan | Price | Savings | Description |
-|------|-------|---------|-------------|
-| Monthly | $9.99/month | — | Full access, cancel anytime |
-| Annual | $79.99/year | 33% vs monthly | Best Value |
+| Tier | Price | Includes |
+|------|-------|----------|
+| Free | $0 | Read + respond + score own round, vote in polls, join leagues, respond to invites |
+| Organizer | $4.99/month | Free + book a round, create availability polls |
+| League Pro | $14.99/month | Organizer + create + manage leagues, create + manage tournaments |
 
 - Processed via **Stripe** (PaymentIntent API)
-- Membership unlocks: round booking, friend network, tournament discovery, AI assistant
+- Tier ordering: Free < Organizer < League Pro; each tier inherits the capabilities of all lower tiers
 
 **Promo Code System:**
 - `FREE` codes — 100% off, no payment info required (used for early adopter acquisition)

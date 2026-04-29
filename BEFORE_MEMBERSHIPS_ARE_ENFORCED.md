@@ -27,10 +27,10 @@ Three emails in [TrialDripService.java](../golfsync-api/src/main/java/com/golfsy
 
 ## 3. Stripe — Create Products and Prices
 
-These do not exist yet. The backend throws `IllegalStateException` at checkout if they are not configured.
+These do not exist yet. The backend throws `IllegalStateException` at checkout if they are not configured. Monthly billing only — no annual variants.
 
-- [ ] In the [Stripe Dashboard](https://dashboard.stripe.com/products), create a **Monthly Membership** recurring price at $9.99/month
-- [ ] Create an **Annual Membership** recurring price at $79.99/year
+- [ ] In the [Stripe Dashboard](https://dashboard.stripe.com/products), create an **Organizer** recurring price at $4.99/month
+- [ ] Create a **League Pro** recurring price at $14.99/month
 - [ ] Copy both `price_...` IDs — they are needed in the next section
 
 ---
@@ -41,8 +41,8 @@ All three Stripe secrets are currently set to placeholder strings in Secrets Man
 
 - [ ] Rotate/set `STRIPE_SECRET_KEY` in Secrets Manager to the production `sk_live_...` key
 - [ ] Set `STRIPE_PUBLISHABLE_KEY` in Secrets Manager to the production `pk_live_...` key
-- [ ] Set `STRIPE_MONTHLY_PRICE_ID` env var to the monthly `price_...` ID from step 3
-- [ ] Set `STRIPE_ANNUAL_PRICE_ID` env var to the annual `price_...` ID from step 3
+- [ ] Set `STRIPE_ORGANIZER_PRICE_ID` env var to the Organizer `price_...` ID from step 3
+- [ ] Set `STRIPE_LEAGUE_PRO_PRICE_ID` env var to the League Pro `price_...` ID from step 3
 - [ ] Add both price ID vars to `.env.prod.example` (test values are fine there)
 
 ---
