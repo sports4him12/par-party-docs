@@ -12,13 +12,9 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 - [ ] **GolfNow cancellation handling** — Implement round cancellation according to GolfNow API requirements. Research GolfNow's cancellation policies (window, fees, confirmation flow) and mirror that logic in the `cancelRound` flow. Update the BPMN process and UI accordingly so users understand what happens when a booked tee time is cancelled.
 
-- [ ] **Tournament Discovery — live feature** — Tournament Discovery is currently hidden ("Coming this Summer" teaser on landing page). When ready to launch: set `TOURNAMENTS_ENABLED=true`, restore the feature card on the landing page, and ensure the tournament database has national coverage beyond the current east-coast seed data.
-
-- [ ] **Refer a Friend — live feature** — Referral program is currently hidden ("Coming this Summer" teaser on landing page). The backend (referral codes, credit logic) is implemented. When ready: restore the dashboard widget, add referral code to account settings, and wire the landing page CTA.
-
 - [ ] **Direct Tee Time Booking — live feature** — Direct booking is listed as "Coming this Summer" on the landing page. Requires a course partner API or proprietary booking layer that removes the GolfNow redirect. When ready: integrate booking API, surface the booking flow within the round creation UX, and remove the teaser card from the landing page.
 
-- [ ] **Membership billing — enforcement cutover** — Live Stripe billing is wired and capable of accepting subscriptions in prod (since 2026-04-28). Remaining gating work: pick the enforcement date (when global trial window closes — currently 2026-06-30 default), re-enable the paused Day 0/21/27 drip emails in `TrialDripService`, decide refund/grace-period policy for the `invoice.payment_failed` webhook (currently log-only), and surface upgrade prompts in the UI for users whose 30-day per-user trial has expired.
+- [ ] **Membership billing — enforcement cutover** — Live Stripe billing is wired and capable of accepting subscriptions in prod (since 2026-04-28). Trial-expired upgrade prompt now ships on both web and mobile dashboards (2026-04-29). Remaining gating work: pick the enforcement date (when global trial window closes — currently 2026-06-30 default), re-enable the paused Day 0/21/27 drip emails in `TrialDripService`, and decide refund/grace-period policy for the `invoice.payment_failed` webhook (currently log-only).
 
 ---
 
@@ -26,13 +22,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 <!-- Enhancements to existing features, UX polish, performance -->
 
-- [ ] **Shareable scorecard** — PNG export of a round scorecard for sharing on Instagram/X. Highest-impact viral moment candidates.
-
-- [ ] **Course leaderboard** — Top scores per course (complements the existing friend leaderboard by rounds played).
-
-- [ ] **Web push notifications** — Alert players to round invites, poll votes, and message activity without requiring them to open the app.
-
-- [ ] **PWA / home screen install** — `manifest.json` + service worker so users can install GolfSync on their phone home screen.
+- [ ] **Web push notifications** — Alert players to round invites, poll votes, and message activity without requiring them to open the app. (PWA manifest is now in place — service worker for push is the remaining piece.)
 
 ---
 
@@ -80,6 +70,7 @@ Living backlog of features, improvements, and fixes. Add items here and they'll 
 
 | Date | Item |
 |------|------|
+| 2026-04-29 | Six-item product batch — Tournament Discovery already enabled in `golfsync-web/lib/features.ts` (verified, no changes needed); Refer-a-Friend landing-page CTA added to bottom of `app/page.tsx` (backend + dashboard widget + mobile share were already shipped 2026-04-28); trial-expired upgrade prompt — `MEMBERSHIP_REQUIRED` redirect bug fixed in `lib/api.ts` (was only catching `TRIAL_EXPIRED`), proactive `TrialBanner` added to web `app/dashboard/page.tsx` and mobile `app/(tabs)/index.tsx` with global-trial-window awareness via new `globalTrialEnd` field on `/api/payments/config`; course leaderboard — new `GET /api/rounds/courses/{courseId}/leaderboard` endpoint + service method (top 25 personal-best per course, dedupe per user), web `/leaderboard` page got Friends/Course tab toggle + favorite-course picker, mobile `app/leaderboard.tsx` rewritten with same toggle (also fixed wrong path bug — was hitting `/api/leaderboard` instead of `/api/rounds/leaderboard`); shareable scorecard PNG — already fully shipped on web (`ShareScorecardMenu.tsx` with canvas-rendered PNG + native share + FB/X/WhatsApp), mobile uses OS share sheet via the public `/s/<code>` link; PWA install — `app/manifest.ts` created with theme colors + icons + standalone display, `appleWebApp` metadata + `themeColor` viewport added to layout. Unit tests added for new backend code; type-check clean. Web push notifications deferred to a separate session per user request. |
 | 2026-04-28 | Stripe membership integration — live in prod — populated `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` live values in Secrets Manager (golfsync-prod/*), wired `STRIPE_ORGANIZER_PRICE_ID` + `STRIPE_LEAGUE_PRO_PRICE_ID` as plain env vars on the API ECS task via CDK (env-config.ts + golfsync-cdk-stack.ts), registered webhook endpoint at `https://golfsync.io/api/stripe/webhook` for `checkout.session.completed` / `invoice.paid` / `invoice.payment_failed` / `customer.subscription.updated` / `customer.subscription.deleted`, deployed via `./scripts/deploy.sh prod` (release tag prod-2026-04-29-0339); also tightened how-to-tournaments wording to avoid implying in-app payment processing. Customer Portal config (cancellations, plan switching, Terms/Privacy URLs, support email) configured via Stripe Dashboard. Enforcement cutover (drip email re-enable, upgrade prompts, refund policy) tracked separately in Features. |
 | 2026-04-24 | Scorecard Tier 3 + UX clutter pass — added per-hole `penalty_strokes` + `fairway_hit` columns (api Liquibase 074 + DTOs + service); web grid renders Pen. + FIR rows on desktop and per-hole chips on mobile, plus FIR/penalty totals in the sticky bar; replaced the 5-checkbox display-options popover with a single Standard ↔ Advanced segmented toggle (mode → derives every secondary flag); legacy users with non-default toggles auto-migrate to Advanced, score-vs-par badges + OCR confidence rings now Advanced-only; landing-hero scorecard preview redesigned to be honest about which stats come from the OCR scan vs. which are optional manual taps. api PR #22, web PR #26. |
 | 2026-04-19 | Mobile parity sprint — round attestation, email-invite friends, dues/payment tracking, round editing, round→messages + invite-token deep-links, forced change-password flow, universal-link manifest (iOS associatedDomains + Android App Links + AASA/assetlinks route handlers on web), workflow tasks display, suggestion prefs (distance + handicap), referral share, dashboard pending-action banners, "already booked" checkbox, round max-players off-by-one bug fix |
