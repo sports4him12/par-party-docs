@@ -5,7 +5,7 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
 
 # Workflow
 - When a task is complete, always commit all changes to git with a descriptive commit message. Push to the remote if a remote is configured.
-- After completing any work, check `golfsync-docs/requirements-todo.md`. If the work fully or partially addresses an open item, move it to the Completed table with today's date and commit the update to the golfsync-docs repo.
+- After completing any work, check the consolidated `BACKLOG.md` at the parent monorepo root. If the work fully or partially addresses an open item, remove it (or move to a "Recently shipped" section) and commit the update.
 
 # Environment
 - Java 21 (Homebrew): /opt/homebrew/opt/openjdk@21 — always set JAVA_HOME to this path when running Java tools
@@ -60,7 +60,7 @@ When making recommendations, prefer libraries, patterns, and tools from the FINO
 
 # Documentation
 - When adding or modifying user-facing features, always update `golfsync-web/app/how-to/page.tsx` (How To Guide) and the `faqs` array in `golfsync-web/app/support/page.tsx` (FAQ) as relevant.
-- **MANDATORY — do this automatically, without being asked:** When a change requires any AWS infrastructure update — new env vars injected into ECS tasks, new Secrets Manager secrets, new IAM permissions, new services or stacks, changed health check paths, or any other deployment-time configuration — update both the CDK stack(s) in `golfsync-cdk/` and `AWS_DeploymentGuide.md` in the same commit as the application change. Do not leave infrastructure and code out of sync.
+- **MANDATORY — do this automatically, without being asked:** When a change requires any AWS infrastructure update — new env vars injected into ECS tasks, new Secrets Manager secrets, new IAM permissions, new services or stacks, changed health check paths, or any other deployment-time configuration — update both the CDK stack(s) in `golfsync-cdk/` and the parent monorepo's `DEPLOY.md` in the same commit as the application change. Do not leave infrastructure and code out of sync.
 
 # Running Cypress E2E Tests
 
