@@ -22,6 +22,24 @@ _Captured 2026-05-15. Tournament date: September 2026. Format: Captain's Choice 
 - **Pain points**: BOTH intake (forms hard to configure) AND reconciliation (who paid, who's in which flight, who's on which team) — workflow start to finish
 - **Pre-launch**: site stays gated until organizer flips to public
 
+## Competitive context: OneCause incumbency
+
+C2 Adopt is currently using **OneCause** and is unhappy specifically with "getting everything ready for the day of event." This is what GolfSync's value crystallizes around — not the scoring features (most platforms have those), but the **setup-to-day-of workflow**.
+
+Known OneCause sharp edges this design directly addresses:
+
+| OneCause pain | GolfSync response |
+|---|---|
+| Reconciliation is bolted on — admins manually mark each check paid against an external deposit list | **Bulk mark-paid** endpoint: tick N rows + enter a deposit reference, one click flips them all to paid with the same reference (Phase 3) |
+| Flight management is shoehorned — flight is a free-text field on the registration; switching AM↔PM is a manual edit | **One-click switch-flight admin action** on each registration row + a "Switch flight" modal (Phase 4 admin command center) |
+| Setup state spread across 6 screens — no single "12 days out, here's what's left to do" view | **Setup checklist** at the top of the admin command center with deep-link CTAs ("Stripe webhook untested → Send test charge", "Hole pars missing → Course Editor") (Phase 4) |
+| Day-of mobile is a separate app with a clunky handoff | Mobile day-of is **continuous with registration data** — same backend, same auth, same data model. No handoff to lose data across. |
+| Customization requires support tickets — sponsor tiers + registration types + branding aren't easily self-serve | All configurable through the admin UI; the role-gated `TOURNAMENT_ORGANIZER` flow lets the customer's organizer self-serve without filing tickets to GolfSync support |
+
+**Implication for prioritization**: features that close OneCause gaps weight higher than features that just match OneCause parity. The bulk mark-paid endpoint and the setup checklist are the "this is why we're paying GolfSync instead of OneCause" features — they're P0, not P2. The mobile day-of polish and the cool scoring features are P1 (necessary, but not the differentiation).
+
+**When demoing for the next charity-tournament prospect**: lead with the **reconciliation + setup checklist** screens, not the scoring features. The scoring works on every platform; the workflow doesn't.
+
 ## Architectural decisions
 
 ### 1. Hosted tournament reuses `LeagueTournament` (with extensions)
