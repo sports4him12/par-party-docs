@@ -5,6 +5,23 @@
 **Replaces:** "Informational only — payment collection coming soon" stub at `app/league/[id]/manage/page.tsx:3042`
 **Driver:** 2026-05-16 audit ranked this #1 next value-add. Stableford-based first paying customer is already in-market weekly; trial cliff at 2026-06-30. Founder direction: owner covers Stripe fees, 1% of every transaction to GolfSync.
 
+> ## V1 is web-only — full stop
+>
+> Every interaction in this RFC happens through the web app (golfsync.io), not the native iOS or Android app:
+>
+> - **Owner connects Stripe:** on web. Express onboarding redirects to a Stripe-hosted form, returns to a golfsync.io callback.
+> - **Owner sets dues mode, marks paid, refunds:** on web (`/league/[id]/manage`).
+> - **Player pays dues:** opens the tournament link in their phone's browser. Stripe Elements + Apple Pay button + Google Pay button work natively in mobile Safari and mobile Chrome — same as the hosted-tournament public registration form that's been live since Phase 4.
+> - **Mobile app routes payment intents to web:** when a registered player taps a "Pay your dues" CTA in the iOS or Android app, it opens the tournament page in the system browser (not in-app web view). One-tap experience for the player; zero Stripe SDK code in the native app.
+>
+> **Why web-only:** keeps the entire v1 surface on the Stripe Elements pattern that already works (Phase 4 hosted tournaments). No native Stripe SDK to bundle, no App Review surface to defend, no Stripe Connect onboarding redirect to plumb through native deep links. The web flow works for 100% of users on every device — including iPhones, including iPads, including Android tablets. iOS and Android users do everything they need to do; they just do it in their browser.
+>
+> **Why this needs to be loud:** every player-facing string ("Pay your dues") + every owner-facing string ("Connect Stripe") needs to read as a real-world commerce action, not as something the mobile app is doing. App Review enforcement on Apple Guideline 3.1.5(a) is pattern-driven — keeping the entire payment flow off the native binary in v1 is the lowest-risk path to never having that conversation at all.
+>
+> **What this means for users:** when an owner taps "Set up payments" or "Manage payments" in the mobile app, the app opens golfsync.io in their browser. Same for players tapping "Pay dues." This is the same pattern the hosted-tournament microsite already uses successfully — no precedent to invent.
+>
+> Native mobile payment collection is a separately-scoped v2 (see BACKLOG `Hosted tournaments` section) with its own design pass.
+
 ---
 
 ## 1 · Money flow at a glance
@@ -261,7 +278,7 @@ Per-tournament mode pickers are independent — owner can have one tournament se
 - Multi-currency (US/CAD only at launch)
 - Payment plans / installments
 - Refund-platform-fee toggle (always keep the 1%)
-- Mobile-native registration flow (web only for v1; mobile uses web view embedded in app — already the hosted-tournament pattern)
+- **Native mobile payment flow** (iOS + Android). v1 is web-only across the board — owner admin AND player payment. Mobile apps open golfsync.io in the system browser for any payment action. Native dues collection (Stripe React Native SDK, Apple Pay button inside the iOS app, etc.) is a separately-scoped v2 with its own design pass + App Review submission strategy. Tracked in BACKLOG.
 
 ---
 
