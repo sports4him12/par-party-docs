@@ -191,6 +191,46 @@ The hosted-tournament admin already has the offline-mark-paid path (shipped 2026
 
 ---
 
+## 5b · State matrix — what owner + player see by Stripe connection state
+
+Critical UX surface: the owner-not-yet-connected state is the most common for a long time. Both surfaces must remain coherent through every transition.
+
+### League owner — `/league/[id]/manage` Tournaments tab + Payments panel
+
+| Stripe state                                  | "Collect via Stripe" mode option | Status banner                                                          | Primary CTA                              |
+|-----------------------------------------------|----------------------------------|------------------------------------------------------------------------|------------------------------------------|
+| Never started Connect                         | Greyed out + tooltip explainer   | Neutral: "Connect Stripe to accept card payments"                      | "Set up payments" (opens Stripe Express) |
+| Onboarding started, not finished              | Greyed out + tooltip explainer   | Yellow: "Stripe needs more info before you can collect"                | "Continue Stripe setup"                  |
+| Connected, charges enabled                    | Available                        | Green: "Connected · payouts to ••••{last4}"                            | "Manage payment settings" (Stripe dash)  |
+| Connected, then Stripe restricted/disabled    | Available but warns on save      | Red: "Stripe paused collection — provide additional info to resume"    | "Resolve in Stripe" (Stripe dash)        |
+| Disconnected by owner                         | Greyed out                       | Neutral: "Stripe disconnected · reconnect to resume card collection"   | "Reconnect Stripe"                       |
+
+When the owner picks "Collect via Stripe" but isn't connected (defensive against UI bugs), the API rejects with a 409 + message "Connect a Stripe account before setting Stripe collection."
+
+Per-tournament mode pickers are independent — owner can have one tournament set to Stripe and another to Manual, both valid.
+
+### Player — `/league/[id]/tournament/[tid]` public registration form
+
+| Tournament dues_collection_mode + Stripe state                                  | What the player sees                                                                                                                                                                                                                                                                       |
+|---------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `INFORMATIONAL` (any Stripe state)                                              | Today's behavior — dues amount displayed, no Pay button, registration succeeds with `payment_status='pending_payment'`. Confirmation email mentions "pay your league organizer however they prefer."                                                                                       |
+| `COLLECT_MANUAL` (any Stripe state)                                             | Dues amount + a "How to pay" callout: "Your organizer collects dues directly — cash, Venmo, or check. Your spot is held when you register; mark-paid happens after."                                                                                                                       |
+| `COLLECT_STRIPE`, owner connected + charges enabled                             | Stripe Elements card form + Apple/Google Pay + surcharge math. "Pay $51.84" CTA. On `payment_intent.succeeded` registration flips to `paid`.                                                                                                                                              |
+| `COLLECT_STRIPE`, owner connected but charges disabled / restricted (graceful)  | Auto-fall-back to Manual UI with an honest banner: "Card payments are temporarily unavailable — pay your organizer directly for now." Registration still succeeds with `pending_payment`. Server-side guard so we don't accidentally fire a PaymentIntent against a restricted account.   |
+| `COLLECT_STRIPE`, owner never connected (impossible via UI — defense in depth)  | Treated identically to `INFORMATIONAL` server-side. Logged at WARN with the tournament id so we can investigate how a bad config slipped through.                                                                                                                                          |
+
+**Key principle:** the player flow never blows up because of an owner setup gap. Worst case is a graceful degradation to "pay your organizer directly" — never a 500 error, never a "Stripe says no" raw message, never a half-charged card.
+
+### Mode-transition rules (server-enforced)
+
+- Going **INFORMATIONAL → MANUAL** or **INFORMATIONAL → STRIPE**: always allowed (no money flowed yet for this tournament)
+- Going **MANUAL → STRIPE**: allowed if owner is connected. Existing manually-marked-paid registrations stay paid; new registrants get the Stripe form
+- Going **STRIPE → MANUAL**: allowed any time. Existing Stripe-paid registrations stay paid; new registrants get the manual flow. Useful when owner needs to disable card collection temporarily
+- Going **STRIPE → INFORMATIONAL** after registrations exist: requires confirm dialog ("Switching to Informational means new registrants won't see a Pay button — your registered players who haven't paid yet will need to pay you directly. Continue?")
+- **Owner disconnects Stripe** while tournaments are in `COLLECT_STRIPE`: tournaments automatically appear in the Stripe-disabled fallback state above. Owner is shown a list of affected tournaments and a one-click "Switch all to Manual" action
+
+---
+
 ## 6 · Edge cases worth pre-deciding
 
 1. **AMEX charges** (3.5% + $0.30): surcharge becomes $2.05 instead of $1.84. Stripe Connect calculates this automatically — we ask for the *fee-inclusive* amount, Stripe returns the actual fee, and our `application_fee_amount` math always uses the same 1% of dues (NOT 1% of fee-inclusive total — that would compound)
