@@ -126,11 +126,13 @@ The **league** needs the Stripe Connect columns (§3) and one new column:
 ALTER TABLE league_tournaments
   ADD COLUMN dues_collection_mode VARCHAR(16) NOT NULL DEFAULT 'INFORMATIONAL';
   -- INFORMATIONAL (today's default — display amount, no collection)
-  -- COLLECT_STRIPE (player pays via card on tournament page)
-  -- COLLECT_MANUAL (owner marks paid as cash/Venmo/check flows in)
+  -- COLLECT_STRIPE (player pays via card on tournament page; manual mark-paid still available as a fallback)
+  -- COLLECT_MANUAL (no Stripe; owner marks paid as cash/Venmo/check flows in)
 ```
 
-When `dues_collection_mode = COLLECT_STRIPE`, the registration form on the tournament page wires Stripe Elements with `application_fee_amount` for the 1% + the surcharge math.
+**Offline mark-paid is a first-class capability in BOTH non-INFORMATIONAL modes.** Owners always have a "Mark paid (offline)" path on every registrant row regardless of whether the tournament is set up for Stripe collection. This covers the universal case: player handed the owner cash at the course, Venmoed them directly, mailed a check, etc. Reusing the existing `PaymentIntakeDialog` shipped in P0-4 (cash / Venmo / check / wire / card-external / other picker) so the UX is consistent with the hosted-tournament admin.
+
+When `dues_collection_mode = COLLECT_STRIPE`, the registration form on the tournament page **also** wires Stripe Elements with `application_fee_amount` for the 1% + the surcharge math. Stripe is the player's self-service path; offline mark-paid is the owner's backup.
 
 ### Payment flow (COLLECT_STRIPE)
 
@@ -144,13 +146,19 @@ When `dues_collection_mode = COLLECT_STRIPE`, the registration form on the tourn
 4. On `payment_intent.succeeded` webhook: server flips registration's `payment_status` to `paid`, stamps `paid_at`, records the Stripe charge id in `payment_reference`
 5. Confirmation email goes out
 
-### Payment flow (COLLECT_MANUAL)
+### Payment flow (COLLECT_MANUAL) — also the offline-mark-paid path
 
-Existing flow — owner marks rows paid via the new admin UI. Same `payment_status` machine. No Stripe involvement.
+No Stripe involvement. Owner marks rows paid via the same `PaymentIntakeDialog` that hosted-tournament admin uses (picker: cash / Venmo / check / wire / card-external / other + optional notes). The payment-method string + notes get composed into `payment_reference` so audit + reconciliation remain searchable.
+
+**This path is also available as a fallback inside COLLECT_STRIPE tournaments.** Real-world example: player insists on paying cash at the course on tournament morning, doesn't want to fill out the Stripe form. Owner opens that registrant row → "Mark paid (offline)" → records cash + optional note. Stripe is never invoked, no platform fee, no processing surcharge — just a status flip with provenance. The 1% platform fee is only collected on transactions that actually flow through Stripe.
 
 ### Payment flow (INFORMATIONAL)
 
-Today's behavior. Dues display only, no collection.
+Today's behavior. Dues display only, no collection. Owners who keep this mode get the offline-mark-paid path too — INFORMATIONAL just means "we don't add a Pay Now button on the public registration form."
+
+### Hosted tournaments — parity
+
+The hosted-tournament admin already has the offline-mark-paid path (shipped 2026-05-16 P0-4 via `PaymentIntakeDialog`). League dues v1 reuses the same component + the same payment-method enum so Becky's mental model and a league commissioner's mental model are identical.
 
 ---
 
