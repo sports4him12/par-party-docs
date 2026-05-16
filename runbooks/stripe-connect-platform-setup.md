@@ -14,6 +14,39 @@
 
 This is the only step that's truly blocking. Without Connect approved, none of the code can charge anything.
 
+> ### ⚠ Known gotcha: "Your account cannot currently create connected accounts"
+>
+> Activating Connect in the UI does NOT immediately enable connected-account creation. Stripe holds new platforms in a pre-approval state until they review your application manually. The Connect Settings page lets you configure everything, but if you try to create a test connected account (via the right-side setup guide), you'll get an error like:
+>
+> > Your account cannot currently create connected accounts. Please contact us via https://support.stripe.com/contact for further assistance.
+>
+> **This is normal for new platforms.** Resolution: open a ticket at https://support.stripe.com/contact (Topic: Connect / Account, Sub-topic: Platform application / Approval). Use this template (proven to get fast turnaround):
+>
+> ```
+> Hi — I'm trying to use Stripe Connect for my platform (Golf Sync LLC,
+> account acct_1TRMwNKUsKRs0y2L). When I try to create a connected
+> account I'm getting "Your account cannot currently create connected
+> accounts." Could you let me know what's needed to enable Connect for
+> my platform?
+>
+> Quick context: Golf Sync is a small-business platform that helps amateur
+> golf league organizers collect tournament dues, hosted-tournament
+> registration fees, and sponsorships from their players and sponsors.
+> Each league organizer will connect their own Stripe Express account;
+> payments settle directly to them; Golf Sync collects a 1% platform fee
+> via application_fee_amount. Standard marketplace pattern.
+>
+> - Platform website: https://golfsync.io
+> - Business entity: Golf Sync LLC, single-member LLC, US (Virginia)
+> - Onboarding type: Express
+> - Initial use case: a US-based amateur golf league with ~20 members
+>   paying weekly dues
+> - I have a paying customer ready to be the first connected account
+>   once Connect is approved
+> ```
+>
+> The "paying customer ready" phrase tends to accelerate approval. Typical turnaround: 1-2 business days. Hit by Ryan on 2026-05-16.
+
 1. Go to **Stripe Dashboard** → make sure you're on the **Golf Sync LLC** account (not personal)
 2. Sidebar: **Settings** (gear icon, bottom left)
 3. Find **Connect** in the settings menu → click **Get started**
