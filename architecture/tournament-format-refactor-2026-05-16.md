@@ -310,9 +310,14 @@ Selection at runtime: `formatStrategyRegistry.forMethod(t.getScoringMethod()).bu
 
 ---
 
-## 8 · Open questions for review
+## 8 · Resolved design decisions
 
-1. **Handicap engine** — Peoria, off-the-low, allowance %, hole cap are all *handicap pipeline* concerns, not scoring concerns. Today they live on `LeagueTournament` directly. Should they migrate into `format_params_json` or stay as columns? I lean **stay as columns** because they apply across formats; the refactor doesn't need to unify them.
-2. **Ryder Cup sessions** — Today sessions are `LeagueTournamentMatch` rows. Do sessions themselves need a `(shape, ball, scoring)` triple, or can they inherit from the parent and only override `ball_rule`? I lean **inherit + override** to keep the data model flat.
-3. **Stableford as scoring vs. shape** — Quota is "Stableford with a target." Chicago is "Quota with negative start." Are these three `scoring_method` values, or one `STABLEFORD` with params? I lean **one method + params** because the math is identical; the leaderboard "wins" rule changes.
-4. **`tournament_type` on the public hosted-tournament microsite** — Customer-facing copy ("Captain's Choice", "18-hole Shamble", etc.) is a labeling concern, not a scoring concern. Where does that label live? Probably a derived display-name function over the triple. Not in scope for mig 151.
+Originally drafted as open questions; resolved 2026-05-16 per the leans below.
+
+1. **Handicap engine columns stay as columns.** Peoria, off-the-low, `handicap_allowance_pct`, `hole_score_cap_mode` apply across formats — moving them into `format_params_json` would force every Stableford row to duplicate them and would lose SQL-level filtering. They stay on `LeagueTournament` as first-class columns. The format-strategy layer reads them directly.
+
+2. **Ryder Cup sessions inherit + override.** A session row carries only the axes that differ from its parent tournament. The session DTO computes the effective triple as `(parent.team_shape, session.ball_rule ?? parent.ball_rule, session.scoring_method ?? parent.scoring_method)`. Keeps the data model flat — no triple-duplication per session — and matches how `LeagueTournamentMatch` already inherits most context from its parent.
+
+3. **`STABLEFORD` is one scoring method; Quota and Chicago are param flavors.** All three share the same per-hole points math. The leaderboard "wins" rule differs: Stableford = highest total wins, Quota = first to hit `target` wins, Chicago = vs.-target ranking. Encode as: `scoring_method='STABLEFORD'`, `format_params_json={pointsTable, target?, negativeStart?, variant?}`. One strategy bean handles all three. `MODIFIED_STABLEFORD` is also a Stableford with a custom `pointsTable` — same method, different params.
+
+4. **Customer-facing format label = derived function + optional override column.** A `displayFormatName(team_shape, ball_rule, scoring_method, format_params_json)` helper returns sane defaults ("4-Player Scramble", "Stableford Foursomes"). When the auto-name reads awkwardly, owners override via a new optional `display_format_name VARCHAR(64) NULL` column on `LeagueTournament`. **Not in scope for mig 151** — added in a later migration alongside the first format that needs an override.
