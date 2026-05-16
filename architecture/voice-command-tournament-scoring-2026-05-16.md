@@ -261,12 +261,13 @@ Apple Watch could host `RecordScoreIntent` natively (App Intents are watchOS-awa
 
 ## I. Rollout / phasing
 
-1. **Phase 1 — Backend only.** Ship `/api/voice/*` + Spring Authorization Server + voice-scoped tokens. Migration `153-oauth2-clients-and-tokens.sql`. No mobile changes. Test via curl. Deployable as normal Spring Boot release.
-2. **Phase 2 — Alexa skill.** Lambda + skill manifest + interaction model. Small audience but proves OAuth2 + voice endpoints end-to-end. No Expo eject required.
-3. **Phase 3 — `expo prebuild` → iOS App Intents → Siri.** Largest user-value lever; biggest workflow change. Plan internal-only build cycle (1-2 sprints) to settle prebuild quirks before TestFlight.
-4. **Phase 4 — Android App Actions.** Re-evaluate against Gemini's app integration at the time; answer may shift between phases 3 and 4.
+**Revised 2026-05-16:** Alexa moved to the last phase. **Siri + Google ship together, both done, before Alexa starts.** Both run on-device inside the app and reuse the existing cookie auth — no OAuth2 needed for either. This shrinks Phase 1 considerably (just the `/api/voice/*` endpoints, no Spring Authorization Server).
 
-Each phase ships independently. Phase 1 is reusable infrastructure even if Phase 3 slips.
+1. **Phase 1 — Backend voice endpoints (no OAuth2).** Ship `/api/voice/active-tournament`, `/api/voice/score`, `/api/voice/leaderboard-summary`. Authenticated by the existing cookie/JWT. No mobile changes. Test via curl. Deployable as normal Spring Boot release. **OAuth2 is NOT in Phase 1** — deferred to the Alexa phase.
+2. **Phase 2 — `expo prebuild` + Siri (iOS App Intents) + Google (Android App Actions), shipped together.** Both platforms covered before moving on. Largest user-value lever; biggest mobile workflow change. The `expo prebuild` migration is a one-time cost that benefits both. iOS 16 minimum required. Android App Actions risk (Gemini deprecation) re-evaluated at start of this phase — may pivot to Gemini app integration.
+3. **Phase 3 — Alexa skill + OAuth2.** Spring Authorization Server with voice-scoped tokens, Liquibase migration for the OAuth2 client/token tables, Lambda + skill manifest. Smallest audience, biggest infra lift. Deferred to last so the user-facing phone surfaces ship first.
+
+Each phase ships independently. Phase 1 is reusable infrastructure for all three voice surfaces.
 
 ## J. Out of scope / follow-ups
 
@@ -278,22 +279,22 @@ Each phase ships independently. Phase 1 is reusable infrastructure even if Phase
 
 ## K. Risks
 
-- **App Actions deprecation.** Google migrating to Gemini app integrations. Phase 4 may pivot.
-- **iOS deployment target.** App Intents requires iOS 16+. Expo SDK 54 default is iOS 15.1. Phase 3 forces a bump to iOS 16; loses any iOS 15 users.
+- **App Actions deprecation.** Google migrating to Gemini app integrations. Phase 2 may pivot the Android half mid-flight.
+- **iOS deployment target.** App Intents requires iOS 16+. Expo SDK 54 default is iOS 15.1. Phase 2 forces a bump to iOS 16; loses any iOS 15 users.
 - **OAuth2 attack surface.** Account-linking flows have long history of token-leak bugs. Use Spring Authorization Server, enable PKCE, strict redirect URI allow-lists, log token issuance.
 - **Alexa account-linking UX.** Clunky WebView in the Alexa app. Expect substantial first-time drop-off. Mitigation: "Link Alexa" deep link from voice-settings screen via Alexa companion universal link.
 - **Voice misrecognition.** "Five"/"nine" near-homophones; "par"/"bogey" frequently confused. Confirmation flow mitigates but doesn't eliminate. Consider 10-minute undo from voice-settings.
-- **Cost.** Lambda + CloudWatch for Alexa: ~$5-20/mo at modest adoption. Spring Authorization Server adds zero infra cost (in-JVM). Real cost is engineering time — Phase 3 (prebuild + AppIntents) is multi-sprint, not a week.
+- **Cost.** Lambda + CloudWatch for Alexa: ~$5-20/mo at modest adoption. Spring Authorization Server adds zero infra cost (in-JVM). Real cost is engineering time — Phase 2 (prebuild + AppIntents + App Actions together) is multi-sprint, not a week.
 - **Concurrent edits.** Voice commit could race with web edit. Confirmation-token claims include strokes; if scorecard moved between preview and commit, 409 + re-prompt.
 
 ## L. Critical files for implementation
 - `golfsync-api/src/main/java/com/golfsync/controller/LiveScoringController.java`
 - `golfsync-api/src/main/java/com/golfsync/config/SecurityConfig.java`
 - `golfsync-api/src/main/java/com/golfsync/security/JwtAuthenticationFilter.java`
-- `golfsync-mobile/app.json` (deployment target bump for Phase 3)
+- `golfsync-mobile/app.json` (deployment target bump for Phase 2)
 - `golfsync-cdk/lib/golfsync-cdk-stack.ts` (Alexa Lambda)
 - new: `golfsync-api/src/main/java/com/golfsync/controller/VoiceController.java`
 - new: `golfsync-api/src/main/java/com/golfsync/service/VoiceService.java`
 - new: `golfsync-api/src/main/resources/db/changelog/changes/153-oauth2-clients-and-tokens.sql`
 - new: `golfsync-alexa-skill/` directory
-- new: `golfsync-mobile/plugins/with-app-intents.js` (Phase 3)
+- new: `golfsync-mobile/plugins/with-app-intents.js` (Phase 2)
