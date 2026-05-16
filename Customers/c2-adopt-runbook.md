@@ -21,51 +21,74 @@ doc). Written 2026-05-15.
 
 ---
 
-## 0 · Status at time of writing (2026-05-15)
+## 0 · Status at time of writing (2026-05-16)
 
-Shipped + live in prod:
+Shipped + live in prod (most recent release `prod-2026-05-16-1157`,
+plus the in-flight `b924qwuo5` deploy adding the hero photo):
+
 - ✅ Hosted-tournament backend (read, intake, payment state machine, webhook routing, emails)
-- ✅ Admin command center (5 tabs: Registrations / Sponsors / Reconcile / Prices / Branding / Setup)
+- ✅ Admin command center (6 tabs: Registrations / Sponsors / Reconcile / Prices / Tiers / Branding / Setup)
 - ✅ Federal Club course seeded (migration 142)
 - ✅ Per-tournament branding (logo + colors + tagline, with admin Branding tab + live preview)
 - ✅ C2 Adopt 2026 tournament row seeded in PREVIEW mode (migration 144)
 - ✅ Hosted Tournaments shortcut tab on `/admin`
+- ✅ **Stripe Elements + Apple Pay / Google Pay** on the public registration form (Phase 4 — `<PaymentElement>` mounted, Web Payment Request API surfaces wallet buttons natively)
+- ✅ **Auto-enroll** — hosted-tournament registrants become league members in the owning league at registration time (unlocks the mobile dashboard LIVE banner for them)
+- ✅ **Flyer-driven corrections** (migrations 148–150, deployed 2026-05-16):
+  - Real tournament date (`2026-09-14`) and inception year (2008)
+  - Tagline replaced with C2 Adopt's official copy
+  - Contact email (`info@c2adopt.org`) added to schema + admin Branding tab + microsite footer
+  - Sponsor tier `signature` renamed to `title` (display "Title Sponsor")
+  - New `friends` tier added at $750 (0 included tickets)
+  - Federal Club aerial photo wired as `hero_image_url` on both siblings
+- ✅ **ConfirmDialog** replaces 6 anonymous `window.confirm` sites on the league + hosted admin pages (named-item, branded copy)
 
 Still on the runway:
-- ⏳ `<PaymentElement>` + Apple Pay / Google Pay buttons on the public registration form (backend ready, frontend pending)
-- ⏳ C2 Adopt customer info collection (date, capacity, tier names/prices, refund policy, etc.)
+- ⏳ Customer info collection — pricing, capacity, tee times, refund policy, banking (Becky's team; see §1)
 - ⏳ Stripe Dashboard configuration (this doc)
 - ⏳ Apple Pay domain verification (this doc)
+- ⏳ Mobile build (`7154c48` + `54761e9` pushed to GitHub but waiting on the next `eas build` Ryan triggers — adds Hosted Tournaments section on Leagues tab + microsite-aware LIVE banner)
 - ⏳ Final flip from `is_publicly_listed=FALSE` to `TRUE` on launch day
 
 ---
 
 ## 1 · Customer info to collect from C2 Adopt (Becky's team)
 
-Send Becky a Google Form / email with these questions. Until these
-land, the placeholder values from migration 144 stay in the admin UI
-and you can edit each via the Branding / Prices / Sponsors tabs:
+Becky's official save-the-date flyer (received 2026-05-16) answered the
+date, tagline, contact email, inception year, hero photo, and added a
+new "Friends of C2" $750 sponsor tier. Those are now seeded via
+migrations 148–150. **The list below is what's still outstanding.**
+Until these land, the placeholder values stay in the admin UI and you
+can edit each via the Branding / Prices / Sponsors tabs:
 
-1. **Tournament date** — exact day in September 2026
-2. **Flight tee times** — what time does AM tee off? PM?
-3. **Per-flight capacity** — 72/72 is the placeholder; can be different
-4. **Registration prices** — confirm or revise:
-   - Foursome: $550 (current placeholder)
-   - Individual: $150
-   - Dinner-only: $50
-5. **Sponsor tier prices + benefit copy** — current placeholders:
+1. **Flight tee times** — flyer says "shotgun start" but doesn't give
+   exact AM/PM times. Placeholders: 8:00 AM / 1:30 PM
+2. **Per-flight capacity** — 72/72 is the placeholder; can be different
+3. **Registration prices** — confirm placeholders against flyer
+   numbers (which we should re-read carefully before any update):
+   - Foursome: $550 (placeholder)
+   - Individual: $150 (placeholder)
+   - Dinner-only: $50 (placeholder)
+4. **Sponsor tier prices + benefit copy** — placeholders:
    - Title: $10,000
    - Eagle: $5,000
    - Birdie: $2,500
    - Hole: $750
-6. **Refund policy** — cancellation deadline? Partial refunds OK? No refunds after X?
-7. **Stripe processing fee** — eat it or pass to registrant ("Add 3% to cover processing")?
-8. **Mail-to address for checks** — exact mailing address C2 Adopt wants printed in confirmation emails
-9. **Bank info for ACH/wire** — routing + account, or do they handle this manually?
-10. **Existing invoicing tool** — QuickBooks? FreshBooks? GolfSync generates invoices, or just tracks status against external ones?
-11. **Becky's email + any other staff** who need TOURNAMENT_ORGANIZER access
-12. **Logo handoff** — we have the SVG from c2adopt.org pre-seeded; do they want a different version for the microsite hero? (Higher-res PNG, white-on-transparent variant for dark backgrounds, etc.)
-13. **Mission statement / tagline** — current placeholder: "Uniting children with forever families. Join us at The Federal Club this September." OK or revise?
+   - Friends of C2: $750 (NEW from flyer — 0 included tickets)
+5. **Refund policy** — cancellation deadline? Partial refunds OK? No refunds after X?
+6. **Stripe processing fee** — eat it or pass to registrant ("Add 3% to cover processing")?
+7. **Mail-to address for checks** — exact mailing address C2 Adopt wants printed in confirmation emails
+8. **Bank info for ACH/wire** — routing + account, or do they handle this manually?
+9. **Existing invoicing tool** — QuickBooks? FreshBooks? GolfSync generates invoices, or just tracks status against external ones?
+10. **Becky's email + any other staff** who need TOURNAMENT_ORGANIZER access
+11. **Logo handoff** — we have the SVG from c2adopt.org pre-seeded; do they want a different version for the microsite hero? (Higher-res PNG, white-on-transparent variant for dark backgrounds, etc.)
+
+**Already collected from the flyer** (no action needed):
+- ~~Tournament date~~ → `2026-09-14` (migration 149)
+- ~~Mission statement / tagline~~ → updated copy (migration 149)
+- ~~Contact email~~ → `info@c2adopt.org` (migration 149)
+- ~~Inception year~~ → 2008 (migration 149)
+- ~~Hero image~~ → Federal Club aerial (migration 150)
 
 ---
 
@@ -177,44 +200,26 @@ Any future date for expiry, any 3-digit CVC, any 5-digit ZIP.
 
 ## 4 · Outstanding code work before public launch
 
-Two pieces of code are not yet shipped. Both are required before
-C2 Adopt's card-paying registrants can actually pay end-to-end:
+Nothing is blocking C2 Adopt's card-paying registrants — Stripe
+Elements + Apple Pay / Google Pay shipped in Phase 4. The remaining
+work is admin clean-up once Becky's answers land:
 
-### 4.1 Stripe Elements + Apple Pay / Google Pay on the public form
+### 4.1 Phase 6 customer-specific tweaks (driven by §1 answers)
 
-**Status**: Backend fully ready. Public registration form has the
-"credit card" payment method radio, and when you submit with `card`
-selected the API creates a real Stripe PaymentIntent and returns a
-`clientSecret`. But the form has nowhere to confirm the card with that
-secret — there's no `<PaymentElement>` mounted, no Stripe.js loaded.
-
-**What needs to happen**:
-1. Load `loadStripe(publishableKey)` once on `/tournaments/[slug]/page.tsx`
-2. When `paymentMethod === "card"` is selected, wrap the submit button
-   in `<Elements stripe={stripePromise} options={{ clientSecret }}>`
-   after the registration POST returns the secret
-3. Mount `<PaymentElement />` inside — Stripe.js's "Payment Element"
-   automatically surfaces Apple Pay on Safari/iOS + Google Pay on
-   Chrome/Android via the Web Payment Request API
-4. Call `stripe.confirmPayment({ elements, confirmParams: { return_url } })`
-   on submit
-5. On the return URL, show the confirmation panel (existing component)
-
-**Reference implementation**: see `/app/membership/page.tsx` — same
-pattern, different intent shape.
-
-**Estimate**: ~2-3 hours.
-
-### 4.2 Phase 6 customer-specific tweaks
-
-Once C2 Adopt answers the questions in §1:
-1. Edit the AM + PM tournament rows to set the real date + times via the league tournament page
-2. Edit Sponsor tiers in the admin Sponsors tab (or run a follow-up migration)
-3. Edit registration prices in the admin Prices tab
-4. Edit refund policy copy in the description field
-5. Grant Becky TOURNAMENT_ORGANIZER role (admin → Tournaments → Manage organizers → by email)
+1. Edit tee times + capacity on AM + PM tournament rows via the league tournament page (or admin command center → Setup tab)
+2. Update sponsor tier prices in the admin Tiers tab if Becky revises
+3. Update registration prices in the admin Prices tab if Becky revises
+4. Add refund policy copy to the tournament description field
+5. Grant Becky TOURNAMENT_ORGANIZER role: admin → Tournaments → Manage organizers → by email
 
 **Estimate**: ~30 min once info arrives.
+
+### 4.2 Deferred polish (not blocking launch — tracked in BACKLOG.md)
+
+See `BACKLOG.md` → `Hosted tournaments — C2 Adopt deferred polish` for
+flight-aware mobile banner, leaderboard flight filter, tee sheet print
+view, switch-flight modal, PDF sponsor invoices, and registrations CSV
+export. None of these block 2026-09-14.
 
 ---
 
@@ -258,5 +263,5 @@ platform was the setup-to-day-of workflow. Your moat:
 - **League management** (date/time/capacity edits): `https://golfsync.io/league/{league_id}/manage` → Tournaments tab → click the C2 Adopt row
 - **Stripe Dashboard**: dashboard.stripe.com → Payments / Webhooks / Settings
 - **Prod API logs**: `aws --profile golfsync-prod logs tail /golfsync-prod/api`
-- **Migrations**: `golfsync-api/src/main/resources/db/changelog/changes/14[2-4]-*.sql`
+- **Migrations**: `golfsync-api/src/main/resources/db/changelog/changes/14[2-9]-*.sql` and `150-*.sql` (142 course seed, 143 branding, 144 row seed, 145–147 sponsor structure rebuild, 148 contact_email column, 149 flyer-driven corrections, 150 hero image)
 - **Brand assets**: logo SVG at `https://c2adopt.org/wp-content/uploads/2023/12/logo.svg` (referenced directly by the seed); colors `#006E9E` (primary) + `#FCB525` (accent)
