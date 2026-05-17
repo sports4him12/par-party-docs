@@ -16,11 +16,20 @@ This is the only step that's truly blocking. Without Connect approved, none of t
 
 > ### ⚠ Known gotcha: "Your account cannot currently create connected accounts"
 >
-> Activating Connect in the UI does NOT immediately enable connected-account creation. Stripe holds new platforms in a pre-approval state until they review your application manually. The Connect Settings page lets you configure everything, but if you try to create a test connected account (via the right-side setup guide), you'll get an error like:
+> If your Stripe account was originally created as a **Standard account** (the default when you sign up for plain Stripe payments), it cannot create connected accounts — only platform accounts can. Trying to create one yields:
 >
 > > Your account cannot currently create connected accounts. Please contact us via https://support.stripe.com/contact for further assistance.
 >
-> **This is normal for new platforms.** Resolution: open a ticket at https://support.stripe.com/contact (Topic: Connect / Account, Sub-topic: Platform application / Approval). Use this template (proven to get fast turnaround):
+> **This is NOT a Stripe approval queue.** The fix is in your own Dashboard:
+>
+> 1. **Stripe Dashboard → Settings → Connect → "Get started"** (or click the **Connect settings** link in the support reply if you opened a ticket)
+> 2. Fill out the platform application (form below)
+> 3. **Agree to the Connect platform agreement** ← this is the load-bearing step that flips your account type from Standard to Platform
+> 4. Activation is typically same-day or instant; you'll see "Connect" in the sidebar afterwards
+>
+> **Hit by Ryan on 2026-05-16:** filed a support ticket (template below, preserved for reference) thinking Stripe needed to manually approve. Stripe support replied clarifying it's the Standard-vs-Platform account type, not a review queue. Memory record `project_stripe_connect_approval.md` was updated to match reality. The support template still works as a way to get a direct link to your Connect settings if you can't find it, but don't expect a magic "approval" email — there isn't one.
+>
+> Support-ticket template (still useful if you get stuck on a non-obvious error message):
 >
 > ```
 > Hi — I'm trying to use Stripe Connect for my platform (Golf Sync LLC,
@@ -44,8 +53,6 @@ This is the only step that's truly blocking. Without Connect approved, none of t
 > - I have a paying customer ready to be the first connected account
 >   once Connect is approved
 > ```
->
-> The "paying customer ready" phrase tends to accelerate approval. Typical turnaround: 1-2 business days. Hit by Ryan on 2026-05-16.
 
 1. Go to **Stripe Dashboard** → make sure you're on the **Golf Sync LLC** account (not personal)
 2. Sidebar: **Settings** (gear icon, bottom left)
