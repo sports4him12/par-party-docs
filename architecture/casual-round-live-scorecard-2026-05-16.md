@@ -143,10 +143,16 @@ Single source of truth for `canEditScorecard(viewerId, round, entry)`. Mirrors b
 
 ## D. Rollout sequencing
 
-1. **Release N** — migrations 153 + 154 + 155 (all additive, all nullable). Old code keeps working.
-2. **Release N+1** — backend reads/writes `round_player_id`, dual-writes `user_id`. New endpoints. Verify zero NULLs in `hole_scores.round_player_id` in prod.
-3. **Release N+2** — migration 156 tightens NOT NULL + swaps unique index. Mobile UI ships behind a feature flag for smoke-testing.
-4. **Release N+3** — migration 157 drops `hole_scores.user_id`.
+1. **Release N** — migrations 153 + 154 + 155 (all additive, all nullable). Old code keeps working. **SHIPPED** in api `aa853a0` (2026-05-17), pending prod deploy.
+2. **Release N+1** — backend reads/writes `round_player_id`, dual-writes `user_id`. New endpoints (POST guest, DELETE player by `roundPlayerId`, PUT course-data, extended PUT scorecard). Verify zero NULLs in `hole_scores.round_player_id` in prod before proceeding.
+3. **Release N+2** — migration 156 tightens NOT NULL + swaps unique index. Web read-only scorecard view ships. Mobile UI ships **bundled with voice commands** in the next EAS build (see "Cross-platform release coordination" below).
+4. **Release N+3** — migration 157 drops `hole_scores.user_id`. Defer at least 30 days after N+2 to give all readers (and any background jobs / analytics) time to migrate off `user_id`.
+
+### Cross-platform release coordination (2026-05-17)
+
+- **API + web** can ship Releases N → N+3 at their own pace; both are free + immediate. No App Review delay, no $ cost.
+- **Mobile** bundles the casual-scorecard UI with voice commands into a single EAS build + a single App Store / Play submission. Doing two separate mobile releases would burn $4 of EAS credit and double the App Review surface area for no user-visible benefit.
+- This means mobile users won't see the new scorecard UI until BOTH the casual-scorecard mobile screen AND voice commands are ready. API endpoints are exercised by web tests + automated curl in the meantime, so server bugs surface independently of the mobile bundle.
 
 Operational rules per memory: `git stash` any WIP before each prod deploy; `./scripts/deploy.sh prod` only; verify each deploy actually rolled out (image hash), not just CFN `UPDATE_COMPLETE`.
 
