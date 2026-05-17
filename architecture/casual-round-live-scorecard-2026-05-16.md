@@ -59,7 +59,7 @@ ALTER TABLE rounds ADD COLUMN hole_handicaps_json  JSON NULL;
 ALTER TABLE rounds ADD COLUMN tees_json            JSON NULL;
 ```
 
-### Migration 156 — next release after backend dual-write
+### Migration 158 — next release after backend dual-write
 ```sql
 ALTER TABLE hole_scores MODIFY round_player_id BIGINT NOT NULL;
 DROP INDEX uk_hole_scores_round_user_hole ON hole_scores;
@@ -67,7 +67,7 @@ ALTER TABLE hole_scores ADD CONSTRAINT uk_hole_scores_rp_hole
   UNIQUE (round_player_id, hole_number);
 ```
 
-### Migration 157 — release after that (≥30 days), zero readers of `user_id`
+### Migration 158 — release after that (≥30 days), zero readers of `user_id`
 ```sql
 ALTER TABLE hole_scores DROP FOREIGN KEY fk_hole_scores_user;
 ALTER TABLE hole_scores DROP COLUMN user_id;
@@ -113,7 +113,7 @@ Guests have `user == null` → only booker can edit them.
 - ETag hash stays stable; new fields are append-only
 
 ### Repository changes
-- `HoleScoreRepository` — add `findByRoundPlayerId…` variants; deprecate `…AndUserId…` until migration 157
+- `HoleScoreRepository` — add `findByRoundPlayerId…` variants; deprecate `…AndUserId…` until migration 158
 - `RoundPlayerRepository` — add `findByRoundIdAndId(roundId, roundPlayerId)` for permission lookups
 
 ## C. Mobile UI
@@ -145,8 +145,8 @@ Single source of truth for `canEditScorecard(viewerId, round, entry)`. Mirrors b
 
 1. **Release N** — migrations 153 + 154 + 155 (all additive, all nullable). Old code keeps working. **SHIPPED** in api `aa853a0` (2026-05-17), pending prod deploy.
 2. **Release N+1** — backend reads/writes `round_player_id`, dual-writes `user_id`. New endpoints (POST guest, DELETE player by `roundPlayerId`, PUT course-data, extended PUT scorecard with `forRoundPlayerId`). Verify zero NULLs in `hole_scores.round_player_id` in prod before proceeding. **SHIPPED** in api `44a20a0` (2026-05-17), pending prod deploy.
-3. **Release N+2** — migration 156 tightens NOT NULL + swaps unique index. Web read-only scorecard view ships. Mobile UI ships **bundled with voice commands** in the next EAS build (see "Cross-platform release coordination" below).
-4. **Release N+3** — migration 157 drops `hole_scores.user_id`. Defer at least 30 days after N+2 to give all readers (and any background jobs / analytics) time to migrate off `user_id`.
+3. **Release N+2** — migration 158 tightens NOT NULL + swaps unique index. Web read-only scorecard view ships. Mobile UI ships **bundled with voice commands** in the next EAS build (see "Cross-platform release coordination" below).
+4. **Release N+3** — migration 158 drops `hole_scores.user_id`. Defer at least 30 days after N+2 to give all readers (and any background jobs / analytics) time to migrate off `user_id`.
 
 ### Cross-platform release coordination (2026-05-17)
 
@@ -163,7 +163,7 @@ Operational rules per memory: `git stash` any WIP before each prod deploy; `./sc
 - WebSocket transport (>50 concurrent viewers threshold per BACKLOG)
 - Guest → registered-user claim flow (verification email, history merge)
 - Per-hole undo / version history on `hole_scores`
-- Drop `hole_scores.user_id` (migration 157, ≥30 days after N+2)
+- Drop `hole_scores.user_id` (migration 158, ≥30 days after N+2)
 
 ## F. Open questions
 
@@ -176,6 +176,6 @@ Operational rules per memory: `git stash` any WIP before each prod deploy; `./sc
 ## G. Risks
 
 - **Deploy-ordering** (memory: 2026-05-10 outage): all three release-N migrations are strictly additive and nullable. Backend dual-writes through release N+1. Only release N+2 tightens to `NOT NULL`, after backfill is proven.
-- **`HoleScore.user_id` callers** — must inventory all readers before migration 157. Inventory step blocks 157, not 156.
+- **`HoleScore.user_id` callers** — must inventory all readers before migration 158. Inventory step blocks 157, not 156.
 - **ETag cache invalidation** — new optional `Entry` fields must not be included in the volatile-fields mask, or the cache thrashes.
 - **Permission bypass via `forUserId` legacy field** — both old and new fields must run through the same permission gate in `ScorecardService`; don't gate only the new one.
