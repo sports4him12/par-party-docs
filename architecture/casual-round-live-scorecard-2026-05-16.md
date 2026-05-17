@@ -144,7 +144,7 @@ Single source of truth for `canEditScorecard(viewerId, round, entry)`. Mirrors b
 ## D. Rollout sequencing
 
 1. **Release N** — migrations 153 + 154 + 155 (all additive, all nullable). Old code keeps working. **SHIPPED** in api `aa853a0` (2026-05-17), pending prod deploy.
-2. **Release N+1** — backend reads/writes `round_player_id`, dual-writes `user_id`. New endpoints (POST guest, DELETE player by `roundPlayerId`, PUT course-data, extended PUT scorecard). Verify zero NULLs in `hole_scores.round_player_id` in prod before proceeding.
+2. **Release N+1** — backend reads/writes `round_player_id`, dual-writes `user_id`. New endpoints (POST guest, DELETE player by `roundPlayerId`, PUT course-data, extended PUT scorecard with `forRoundPlayerId`). Verify zero NULLs in `hole_scores.round_player_id` in prod before proceeding. **SHIPPED** in api `44a20a0` (2026-05-17), pending prod deploy.
 3. **Release N+2** — migration 156 tightens NOT NULL + swaps unique index. Web read-only scorecard view ships. Mobile UI ships **bundled with voice commands** in the next EAS build (see "Cross-platform release coordination" below).
 4. **Release N+3** — migration 157 drops `hole_scores.user_id`. Defer at least 30 days after N+2 to give all readers (and any background jobs / analytics) time to migrate off `user_id`.
 
